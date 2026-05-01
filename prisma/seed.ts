@@ -37,6 +37,21 @@ async function main() {
     },
   });
 
+	await prisma.user.upsert({
+	  where: {
+		email: "admin@partsec.local",
+	 },
+	 update: {},
+	 create: {
+	  tenantId: null,
+	  name: "Administrador Partsec",
+	  email: "admin@partsec.local",
+	  passwordHash: null,
+	  role: UserRole.PARTSEC_ADMIN,
+      isActive: true,
+    },
+  });
+
   await prisma.customerAsset.createMany({
     data: [
       {
