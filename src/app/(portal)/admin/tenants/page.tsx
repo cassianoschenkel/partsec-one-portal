@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getAdminTenantsOverview } from "@/lib/queries/admin";
 import {
   Building2,
@@ -116,7 +117,12 @@ export default async function AdminTenantsPage() {
               {tenants.map((tenant) => (
                 <tr key={tenant.id}>
                   <td className="px-4 py-3 font-semibold text-slate-900">
-                    {tenant.name}
+		    <Link
+		    href={`/admin/tenants/${tenant.slug}`}
+		    className="transition hover:text-[#0f3b73] hover:underline"
+		    >
+		    {tenant.name}
+		  </Link>
                   </td>
 
                   <td className="px-4 py-3 font-mono text-xs text-slate-600">

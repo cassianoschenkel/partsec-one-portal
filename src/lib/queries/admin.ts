@@ -18,3 +18,27 @@ export async function getAdminTenantsOverview() {
 
   return tenants;
 }
+export async function getAdminTenantBySlug(slug: string) {
+  return prisma.tenant.findUnique({
+    where: {
+      slug,
+    },
+    include: {
+      users: {
+        orderBy: {
+          name: "asc",
+        },
+      },
+      assets: {
+        orderBy: {
+          name: "asc",
+        },
+      },
+      integrations: {
+        orderBy: {
+          type: "asc",
+        },
+      },
+    },
+  });
+}
