@@ -1,48 +1,18 @@
-import Link from "next/link";
-import {
-  Bell,
-  FileText,
-  LayoutDashboard,
-  Monitor,
-  Settings,
-  ShieldCheck,
-  Ticket,
-} from "lucide-react";
+import { ShieldCheck } from "lucide-react";
+import { PortalSidebarNav } from "@/components/layout/PortalSidebarNav";
 
-const menuItems = [
-  {
-    label: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    label: "Ativos",
-    href: "/assets",
-    icon: Monitor,
-  },
-  {
-    label: "Alertas",
-    href: "/alerts",
-    icon: Bell,
-  },
-  {
-    label: "Chamados",
-    href: "/tickets",
-    icon: Ticket,
-  },
-  {
-    label: "Relatórios",
-    href: "/reports",
-    icon: FileText,
-  },
-  {
-    label: "Configurações",
-    href: "/settings",
-    icon: Settings,
-  },
-];
+//export function PortalLayout({ children }: { children: React.ReactNode }) {
+	type PortalLayoutProps = {
+	  children: React.ReactNode;
+	  tenantName?: string;
+	  tenantInitials?: string;
+	};
 
-export function PortalLayout({ children }: { children: React.ReactNode }) {
+	export function PortalLayout({
+	  children,
+	  tenantName = "Partsec One",
+	  tenantInitials = "PO",
+	}: PortalLayoutProps) {
   return (
     <div className="min-h-screen bg-slate-100">
       <aside className="fixed left-0 top-0 z-20 flex h-screen w-72 flex-col bg-[#071426] text-white">
@@ -60,29 +30,12 @@ export function PortalLayout({ children }: { children: React.ReactNode }) {
               <div className="text-lg font-bold tracking-tight text-white">
                 Partsec One
               </div>
-              <div className="text-xs text-slate-300">
-                Customer Portal
-              </div>
+              <div className="text-xs text-slate-300">Customer Portal</div>
             </div>
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1 px-4 py-6">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-200 transition hover:bg-white/10 hover:text-white"
-              >
-                <Icon className="h-5 w-5" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <PortalSidebarNav />
 
         <div className="border-t border-white/10 px-6 py-5">
           <div className="rounded-2xl bg-white/5 p-4">
@@ -101,11 +54,9 @@ export function PortalLayout({ children }: { children: React.ReactNode }) {
         <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-8 py-5 backdrop-blur">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-medium text-slate-500">
-                Cliente
-              </div>
+              <div className="text-sm font-medium text-slate-500">Cliente</div>
               <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                Empresa Demonstração
+                {tenantName}
               </h1>
             </div>
 
@@ -114,7 +65,7 @@ export function PortalLayout({ children }: { children: React.ReactNode }) {
                 Operação normal
               </div>
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
-                CD
+                {tenantInitials}
               </div>
             </div>
           </div>
