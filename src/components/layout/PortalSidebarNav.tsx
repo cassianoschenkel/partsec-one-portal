@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bell,
+  Database,
   FileText,
   LayoutDashboard,
   Monitor,
@@ -41,6 +42,11 @@ const menuItems = [
     label: "Configurações",
     href: "/settings",
     icon: Settings,
+  },
+  {
+  label: "Admin",
+  href: "/admin/tenants",
+  icon: Database,
   },
 ];
 
