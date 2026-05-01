@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  PARTSEC_ADMIN
+  TENANT_ADMIN
+  TENANT_USER
+  READ_ONLY
+}
+
+enum AssetType {
+  SERVER
+  WORKSTATION
+  FIREWALL
+  SWITCH
+  ROUTER
+  ACCESS_POINT
+  LINK
+  SERVICE
+  OTHER
+}
+
+enum IntegrationType {
+  ZABBIX
+  WAZUH
+  ZAMMAD
+}
+
+enum IntegrationStatus {
+  ACTIVE
+  INACTIVE
+  ERROR
+}
+
+model Tenant {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  document    String?
+  isActive    Boolean  @default(true)
+
+  users       User[]
+  assets      CustomerAsset[]
+  integrations IntegrationConfig[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("tenants")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  tenantId     String?
+  name         String
+  email        String   @unique
+  passwordHash String?
+  role         UserRole @default(TENANT_USER)
+  isActive     Boolean  @default(true)
+
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("users")
+}
+
+model CustomerAsset {
+  id              String    @id @default(cuid())
+  tenantId        String
+  name            String
+  hostname        String?
+  ipAddress       String?
+  assetType       AssetType @default(SERVER)
+  operatingSystem String?
+  description     String?
+
+  zabbixHostId    String?
+  wazuhAgentId    String?
+
+  isActive        Boolean   @default(true)
+
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([zabbixHostId])
+  @@index([wazuhAgentId])
+  @@map("customer_assets")
+}
+
+model IntegrationConfig {
+  id              String            @id @default(cuid())
+  tenantId        String
+  type            IntegrationType
+  status          IntegrationStatus @default(INACTIVE)
+
+  displayName     String
+  baseUrl         String?
+  externalGroupId String?
+  externalOrgId   String?
+
+  notes           String?
+
+  tenant          Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([tenantId])
+  @@unique([tenantId, type])
+  @@map("integration_configs")
+}
