@@ -23,22 +23,31 @@ export default async function AdminTenantsPage() {
 
   return (
     <div className="space-y-8">
-      <section>
-        <div className="mb-6">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
-            <Database className="h-4 w-4" />
-            Administração Partsec
-          </div>
+		<section>
+		  <div className="mb-6 flex items-start justify-between gap-6">
+			<div>
+			  <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
+				<Database className="h-4 w-4" />
+				Administração Partsec
+			  </div>
 
-          <h2 className="text-3xl font-bold tracking-tight text-slate-900">
-            Tenants
-          </h2>
+			  <h2 className="text-3xl font-bold tracking-tight text-slate-900">
+				Tenants
+			  </h2>
 
-          <p className="mt-2 text-slate-600">
-            Visão administrativa dos clientes configurados no Partsec One.
-          </p>
-        </div>
-      </section>
+			  <p className="mt-2 text-slate-600">
+				Visão administrativa dos clientes configurados no Partsec One.
+			  </p>
+			</div>
+
+			<Link
+			  href="/admin/tenants/new"
+			  className="rounded-2xl bg-[#071426] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#0f2544]"
+			>
+			Novo tenant
+		</Link>
+		</div>
+	  </section>
 
       <section className="grid gap-5 md:grid-cols-4">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
