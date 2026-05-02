@@ -190,3 +190,52 @@ export async function createTenantAssetAction(
 
   redirect(`/admin/tenants/${tenant.slug}`);
 }
+export async function updateTenantIntegrationAction(
+  tenantSlug: string,
+  integrationType: IntegrationType,
+  formData: FormData
+) {
+  const statusInput = String(formData.get("status") ?? "").trim();
+  const baseUrl = String(formData.get("baseUrl") ?? "").trim();
+  const externalGroupId = String(formData.get("externalGroupId") ?? "").trim();
+  const externalOrgId = String(formData.get("externalOrgId") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
+
+  const allowedStatuses = [
+    IntegrationStatus.ACTIVE,
+    IntegrationStatus.INACTIVE,
+    IntegrationStatus.ERROR,
+  ];
+
+  if (!allowedStatuses.includes(statusInput as IntegrationStatus)) {
+    throw new Error("Status de integração inválido.");
+  }
+
+  const tenant = await prisma.tenant.findUnique({
+    where: {
+      slug: tenantSlug,
+    },
+  });
+
+  if (!tenant) {
+    throw new Error("Tenant não encontrado.");
+  }
+
+  await prisma.integrationConfig.update({
+    where: {
+      tenantId_type: {
+        tenantId: tenant.id,
+        type: integrationType,
+      },
+    },
+    data: {
+      status: statusInput as IntegrationStatus,
+      baseUrl: baseUrl || null,
+      externalGroupId: externalGroupId || null,
+      externalOrgId: externalOrgId || null,
+      notes: notes || null,
+    },
+  });
+
+  redirect(`/admin/tenants/${tenant.slug}/integrations`);
+}
