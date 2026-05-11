@@ -24,6 +24,27 @@ function buildZabbixApiUrl(baseUrl: string) {
   return `${cleanBaseUrl}/api_jsonrpc.php`;
 }
 
+export type ZabbixHost = {
+  hostid: string;
+  host: string;
+  name: string;
+  status: string;
+  interfaces?: Array<{
+    ip?: string;
+    dns?: string;
+    useip?: string;
+  }>;
+};
+
+export type ZabbixProblem = {
+  eventid: string;
+  objectid: string;
+  name: string;
+  severity: string;
+  clock: string;
+  acknowledged: string;
+};
+
 export class ZabbixClient {
   private apiUrl: string;
   private apiToken: string;
@@ -92,7 +113,7 @@ export class ZabbixClient {
   }
 
   async getProblemsByGroupId(groupId: string) {
-    return this.call<unknown[]>("problem.get", {
+    return this.call<ZabbixProblem[]>("problem.get", {
       output: "extend",
       groupids: [groupId],
       sortfield: ["eventid"],
@@ -102,7 +123,7 @@ export class ZabbixClient {
   }
 
   async getHostsByGroupId(groupId: string) {
-    return this.call<unknown[]>("host.get", {
+    return this.call<ZabbixHost[]>("host.get", {
       output: ["hostid", "host", "name", "status"],
       groupids: [groupId],
       selectInterfaces: ["ip", "dns", "useip"],

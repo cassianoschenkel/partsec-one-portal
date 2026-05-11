@@ -320,13 +320,22 @@ export default async function AdminTenantDetailPage({
               </p>
             </div>
           </div>
+  	  <div className="flex items-center gap-2">
+	    <Link
+	      href={`/admin/tenants/${tenant.slug}/zabbix`}
+  	      className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100"
+  >
+	    Ver Zabbix
+	    </Link>
 
-          <Link
-            href={`/admin/tenants/${tenant.slug}/integrations`}
-            className="rounded-2xl bg-[#071426] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#0f2544]"
-          >
-            Configurar integrações
-          </Link>
+	    <Link
+	      href={`/admin/tenants/${tenant.slug}/integrations`}
+	      className="rounded-2xl bg-[#071426] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#0f2544]"
+	  >
+    Configurar integrações
+  </Link>
+</div>
+	  
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">

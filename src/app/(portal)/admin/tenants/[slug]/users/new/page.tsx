@@ -1,8 +1,10 @@
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createTenantUserAction } from "@/app/actions/tenant-actions";
 import { getAdminTenantBySlug } from "@/lib/queries/admin";
-import { ArrowLeft, UserPlus, Users } from "lucide-react";
+import { UserPlus, Users } from "lucide-react";
+//import { ArrowLeft, UserPlus, Users } from "lucide-react";
 
 type NewTenantUserPageProps = {
   params: Promise<{
@@ -24,29 +26,19 @@ export default async function NewTenantUserPage({
 
   return (
     <div className="space-y-8">
-      <section>
-        <Link
-          href={`/admin/tenants/${tenant.slug}`}
-          className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-slate-950"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Voltar para o tenant
-        </Link>
-
-        <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
-          <UserPlus className="h-4 w-4" />
-          Novo usuário
-        </div>
-
-        <h2 className="text-3xl font-bold tracking-tight text-slate-900">
-          Adicionar usuário
-        </h2>
-
-        <p className="mt-2 text-slate-600">
-          Cadastre um novo usuário vinculado ao tenant{" "}
-          <span className="font-semibold text-slate-900">{tenant.name}</span>.
-        </p>
-      </section>
+      <AdminPageHeader
+		backHref={`/admin/tenants/${tenant.slug}`}
+		backLabel="Voltar para o tenant"
+		badgeLabel="Novo usuário"
+		badgeIcon={UserPlus}
+		title="Adicionar usuário"
+		description={
+		 <>
+			Cadastre um novo usuário vinculado ao tenant{" "}
+			<span className="font-semibold text-slate-900">{tenant.name}</span>.
+		</>
+  }
+/>
 
       <section className="grid gap-6 xl:grid-cols-3">
         <form

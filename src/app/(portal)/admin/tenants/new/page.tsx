@@ -1,32 +1,20 @@
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import Link from "next/link";
 import { createTenantAction } from "@/app/actions/tenant-actions";
-import { ArrowLeft, Building2, PlusCircle } from "lucide-react";
+//import { ArrowLeft, Building2, PlusCircle } from "lucide-react";
+import { Building2, PlusCircle } from "lucide-react";
 
 export default function NewTenantPage() {
   return (
     <div className="space-y-8">
-      <section>
-        <Link
-          href="/admin/tenants"
-          className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-slate-950"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Voltar para tenants
-        </Link>
-
-        <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
-          <PlusCircle className="h-4 w-4" />
-          Novo tenant
-        </div>
-
-        <h2 className="text-3xl font-bold tracking-tight text-slate-900">
-          Cadastrar novo tenant
-        </h2>
-
-        <p className="mt-2 text-slate-600">
-          Crie um novo cliente na estrutura multi-tenant do Partsec One.
-        </p>
-      </section>
+		<AdminPageHeader
+		  backHref="/admin/tenants"
+		  backLabel="Voltar para tenants"
+		  badgeLabel="Novo tenant"
+		  badgeIcon={PlusCircle}
+		  title="Cadastrar novo tenant"
+		  description="Crie um novo cliente na estrutura multi-tenant do Partsec One."
+		/>
 
       <section className="grid gap-6 xl:grid-cols-3">
         <form
