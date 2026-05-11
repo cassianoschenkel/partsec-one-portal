@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  testZabbixIntegrationAction,
   updateTenantIntegrationAction,
   updateTenantIntegrationCredentialAction,
 } from "@/app/actions/tenant-actions";
@@ -85,6 +86,10 @@ export default async function TenantIntegrationsPage({
           const hasApiToken = integration.credentials.some(
             (credential) => credential.key === "api_token"
           );
+	  const testZabbixForTenant =
+	    integration.type === "ZABBIX"
+      	    ? testZabbixIntegrationAction.bind(null, tenant.slug)
+ 	    : null;
 
           return (
             <div
@@ -156,7 +161,7 @@ export default async function TenantIntegrationsPage({
                         name="baseUrl"
                         type="text"
                         defaultValue={integration.baseUrl ?? ""}
-                        placeholder="Ex: https://zabbix.partsec.local"
+                        placeholder="Ex: https://zabbix.partsec.com.br"
                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900"
                       />
                     </div>
@@ -283,6 +288,17 @@ export default async function TenantIntegrationsPage({
                     Salvar token
                   </button>
                 </form>
+
+                {testZabbixForTenant && (
+                  <form action={testZabbixForTenant}>
+                    <button
+                      type="submit"
+                      className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-800 transition hover:bg-slate-100"
+                    >
+                      Testar conexão Zabbix
+                    </button>
+                  </form>
+                )}
               </div>
             </div>
           );

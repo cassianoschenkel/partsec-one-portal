@@ -1,5 +1,6 @@
 "use server";
 
+import { getZabbixClientForTenant } from "@/lib/integrations/zabbix-client";
 import { encryptSecret } from "@/lib/crypto";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -294,4 +295,13 @@ export async function updateTenantIntegrationCredentialAction(
   });
 
   redirect(`/admin/tenants/${tenant.slug}/integrations`);
+}
+export async function testZabbixIntegrationAction(tenantSlug: string) {
+  const { client } = await getZabbixClientForTenant(tenantSlug);
+
+  const version = await client.getVersion();
+
+  console.log(`Zabbix conectado para tenant ${tenantSlug}. Versão: ${version}`);
+
+  redirect(`/admin/tenants/${tenantSlug}/integrations`);
 }
