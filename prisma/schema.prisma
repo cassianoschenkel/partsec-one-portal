@@ -113,6 +113,7 @@ model IntegrationConfig {
   notes           String?
 
   tenant          Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  credentials     IntegrationCredential[]
 
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
@@ -120,4 +121,20 @@ model IntegrationConfig {
   @@index([tenantId])
   @@unique([tenantId, type])
   @@map("integration_configs")
+}
+
+model IntegrationCredential {
+  id                  String            @id @default(cuid())
+  integrationConfigId String
+  key                 String
+  encryptedValue      String
+
+  integrationConfig   IntegrationConfig @relation(fields: [integrationConfigId], references: [id], onDelete: Cascade)
+
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@index([integrationConfigId])
+  @@unique([integrationConfigId, key])
+  @@map("integration_credentials")
 }

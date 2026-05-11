@@ -1,5 +1,6 @@
 "use server";
 
+import { encryptSecret } from "@/lib/crypto";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createSlug } from "@/lib/slug";
@@ -234,6 +235,61 @@ export async function updateTenantIntegrationAction(
       externalGroupId: externalGroupId || null,
       externalOrgId: externalOrgId || null,
       notes: notes || null,
+    },
+  });
+
+  redirect(`/admin/tenants/${tenant.slug}/integrations`);
+}
+export async function updateTenantIntegrationCredentialAction(
+  tenantSlug: string,
+  integrationType: IntegrationType,
+  formData: FormData
+) {
+  const apiToken = String(formData.get("apiToken") ?? "").trim();
+
+  if (!apiToken) {
+    throw new Error("API token é obrigatório.");
+  }
+
+  const tenant = await prisma.tenant.findUnique({
+    where: {
+      slug: tenantSlug,
+    },
+  });
+
+  if (!tenant) {
+    throw new Error("Tenant não encontrado.");
+  }
+
+  const integration = await prisma.integrationConfig.findUnique({
+    where: {
+      tenantId_type: {
+        tenantId: tenant.id,
+        type: integrationType,
+      },
+    },
+  });
+
+  if (!integration) {
+    throw new Error("Integração não encontrada.");
+  }
+
+  const encryptedValue = encryptSecret(apiToken);
+
+  await prisma.integrationCredential.upsert({
+    where: {
+      integrationConfigId_key: {
+        integrationConfigId: integration.id,
+        key: "api_token",
+      },
+    },
+    update: {
+      encryptedValue,
+    },
+    create: {
+      integrationConfigId: integration.id,
+      key: "api_token",
+      encryptedValue,
     },
   });
 

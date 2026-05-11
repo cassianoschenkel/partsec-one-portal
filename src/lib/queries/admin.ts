@@ -35,10 +35,17 @@ export async function getAdminTenantBySlug(slug: string) {
         },
       },
       integrations: {
+       orderBy: {
+        type: "asc",
+     },
+     include: {
+      credentials: {
         orderBy: {
-          type: "asc",
+          key: "asc",
         },
+       },
       },
+     },
     },
   });
 }
