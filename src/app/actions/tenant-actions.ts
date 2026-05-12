@@ -91,13 +91,13 @@ export async function createTenantUserAction(
     throw new Error("E-mail do usuário é obrigatório.");
   }
 
-  const allowedRoles = [
+  const allowedRoles: string[] = [
     UserRole.TENANT_ADMIN,
     UserRole.TENANT_USER,
     UserRole.READ_ONLY,
   ];
 
-  if (!allowedRoles.includes(roleInput as UserRole)) {
+  if (!allowedRoles.includes(roleInput)) {
     throw new Error("Perfil de usuário inválido.");
   }
 
@@ -121,47 +121,47 @@ export async function createTenantUserAction(
     throw new Error("Já existe um usuário com este e-mail.");
   }
 
-	const user = await prisma.user.create({
-	  data: {
-		tenantId: tenant.id,
-		name,
-		email,
-		role: roleInput as UserRole,
-		passwordHash: null,
-		isActive: true,
-	  },
-	});
-
-	const { rawToken } = await createPasswordSetupToken(user.id);
-
-const appUrl = process.env.APP_URL?.replace(/\/+$/, "") ?? "";
-const setupUrl = `${appUrl}/set-password?token=${rawToken}`;
-
-const emailContent = buildPasswordSetupEmail({
-  userName: user.name,
-  tenantName: tenant.name,
-  setupUrl,
-});
-
-let inviteSent = "true";
-
-try {
-  await sendEmail({
-    to: user.email,
-    subject: emailContent.subject,
-    html: emailContent.html,
-    text: emailContent.text,
+  const user = await prisma.user.create({
+    data: {
+      tenantId: tenant.id,
+      name,
+      email,
+      role: roleInput as UserRole,
+      passwordHash: null,
+      isActive: true,
+    },
   });
-} catch (error) {
-  inviteSent = "false";
-  console.error("Falha ao enviar convite de acesso:", error);
-}
 
-redirect(
-  `/admin/tenants/${tenant.slug}?createdUserEmail=${encodeURIComponent(
-    user.email
-  )}&setupToken=${rawToken}&inviteSent=${inviteSent}`
-);
+  const { rawToken } = await createPasswordSetupToken(user.id);
+
+  const appUrl = process.env.APP_URL?.replace(/\/+$/, "") ?? "";
+  const setupUrl = `${appUrl}/set-password?token=${rawToken}`;
+
+  const emailContent = buildPasswordSetupEmail({
+    userName: user.name,
+    tenantName: tenant.name,
+    setupUrl,
+  });
+
+  let inviteSent = "true";
+
+  try {
+    await sendEmail({
+      to: user.email,
+      subject: emailContent.subject,
+      html: emailContent.html,
+      text: emailContent.text,
+    });
+  } catch (error) {
+    inviteSent = "false";
+    console.error("Falha ao enviar convite de acesso:", error);
+  }
+
+  redirect(
+    `/admin/tenants/${tenant.slug}?createdUserEmail=${encodeURIComponent(
+      user.email
+    )}&setupToken=${rawToken}&inviteSent=${inviteSent}`
+  );
 }
 
 export async function createTenantAssetAction(
@@ -181,7 +181,7 @@ export async function createTenantAssetAction(
     throw new Error("Nome do ativo é obrigatório.");
   }
 
-  const allowedAssetTypes = [
+  const allowedAssetTypes: string[] = [
     AssetType.SERVER,
     AssetType.WORKSTATION,
     AssetType.FIREWALL,
@@ -193,7 +193,7 @@ export async function createTenantAssetAction(
     AssetType.OTHER,
   ];
 
-  if (!allowedAssetTypes.includes(assetTypeInput as AssetType)) {
+  if (!allowedAssetTypes.includes(assetTypeInput)) {
     throw new Error("Tipo de ativo inválido.");
   }
 
@@ -224,6 +224,7 @@ export async function createTenantAssetAction(
 
   redirect(`/admin/tenants/${tenant.slug}`);
 }
+
 export async function updateTenantIntegrationAction(
   tenantSlug: string,
   integrationType: IntegrationType,
@@ -235,13 +236,13 @@ export async function updateTenantIntegrationAction(
   const externalOrgId = String(formData.get("externalOrgId") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
 
-  const allowedStatuses = [
+  const allowedStatuses: string[] = [
     IntegrationStatus.ACTIVE,
     IntegrationStatus.INACTIVE,
     IntegrationStatus.ERROR,
   ];
 
-  if (!allowedStatuses.includes(statusInput as IntegrationStatus)) {
+  if (!allowedStatuses.includes(statusInput)) {
     throw new Error("Status de integração inválido.");
   }
 
@@ -273,6 +274,7 @@ export async function updateTenantIntegrationAction(
 
   redirect(`/admin/tenants/${tenant.slug}/integrations`);
 }
+
 export async function updateTenantIntegrationCredentialAction(
   tenantSlug: string,
   integrationType: IntegrationType,
@@ -328,6 +330,7 @@ export async function updateTenantIntegrationCredentialAction(
 
   redirect(`/admin/tenants/${tenant.slug}/integrations`);
 }
+
 export async function testZabbixIntegrationAction(tenantSlug: string) {
   const { client } = await getZabbixClientForTenant(tenantSlug);
 
