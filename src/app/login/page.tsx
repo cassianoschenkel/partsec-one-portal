@@ -1,7 +1,16 @@
-import Link from "next/link";
+import { loginAction } from "@/app/actions/auth-actions";
 import { LockKeyhole, ShieldCheck } from "lucide-react";
 
-export default function LoginPage() {
+type LoginPageProps = {
+  searchParams?: Promise<{
+    error?: string;
+  }>;
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const params = searchParams ? await searchParams : {};
+  const hasInvalidCredentials = params.error === "invalid_credentials";
+
   return (
     <main className="min-h-screen bg-[#071426]">
       <div className="grid min-h-screen lg:grid-cols-2">
@@ -11,7 +20,7 @@ export default function LoginPage() {
               <img
                 src="/images/partsec-logo.png"
                 alt="Partsec"
-                className="h-52 w-auto"
+                className="h-12 w-auto"
               />
             </div>
 
@@ -78,7 +87,13 @@ export default function LoginPage() {
                 </p>
               </div>
 
-              <form className="space-y-5">
+              {hasInvalidCredentials && (
+                <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                  E-mail ou senha inválidos.
+                </div>
+              )}
+
+              <form action={loginAction} className="space-y-5">
                 <div>
                   <label
                     htmlFor="email"
@@ -88,8 +103,10 @@ export default function LoginPage() {
                   </label>
                   <input
                     id="email"
+                    name="email"
                     type="email"
                     placeholder="seu.email@empresa.com.br"
+                    required
                     className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900"
                   />
                 </div>
@@ -103,32 +120,20 @@ export default function LoginPage() {
                   </label>
                   <input
                     id="password"
+                    name="password"
                     type="password"
                     placeholder="Digite sua senha"
+                    required
                     className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900"
                   />
                 </div>
 
-                <div className="flex items-center justify-between text-sm">
-                  <label className="flex items-center gap-2 text-slate-600">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-slate-300"
-                    />
-                    Lembrar acesso
-                  </label>
-
-                  <a href="#" className="font-semibold text-slate-900">
-                    Esqueci minha senha
-                  </a>
-                </div>
-
-                <Link
-                  href="/dashboard"
+                <button
+                  type="submit"
                   className="flex w-full items-center justify-center rounded-2xl bg-[#071426] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#0f2544]"
                 >
                   Entrar
-                </Link>
+                </button>
               </form>
             </div>
 
@@ -143,4 +148,3 @@ export default function LoginPage() {
     </main>
   );
 }
-
