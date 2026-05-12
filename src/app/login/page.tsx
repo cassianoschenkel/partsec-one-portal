@@ -24,7 +24,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               <img
                 src="/images/partsec-logo.png"
                 alt="Partsec"
-                className="h-12 w-auto"
+                className="h-48 w-auto"
               />
             </div>
 

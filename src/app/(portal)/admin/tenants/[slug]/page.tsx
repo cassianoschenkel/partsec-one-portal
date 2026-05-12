@@ -36,10 +36,12 @@ type AdminTenantDetailPageProps = {
   const setupToken = query.setupToken;
   const createdUserEmail = query.createdUserEmail;
 
+  const appUrl = process.env.APP_URL?.replace(/\/+$/, "") ?? "";
+
   const setupPasswordUrl =
-    setupToken && createdUserEmail
-  	? `/set-password?token=${setupToken}`
-	: null;
+  setupToken && createdUserEmail
+    ? `${appUrl}/set-password?token=${setupToken}`
+    : null;
 
   const activeUsers = tenant.users.filter((user) => user.isActive);
   const activeAssets = tenant.assets.filter((asset) => asset.isActive);

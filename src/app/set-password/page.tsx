@@ -40,7 +40,7 @@ export default async function SetPasswordPage({
               <img
                 src="/images/partsec-logo.png"
                 alt="Partsec"
-                className="h-12 w-auto"
+                className="h-48 w-auto"
               />
             </div>
           </div>
