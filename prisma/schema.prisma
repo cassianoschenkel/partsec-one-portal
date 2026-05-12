@@ -65,12 +65,29 @@ model User {
   isActive     Boolean  @default(true)
 
   tenant       Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  passwordSetupTokens PasswordSetupToken[]
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   @@index([tenantId])
   @@map("users")
+}
+
+model PasswordSetupToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("password_setup_tokens")
 }
 
 model CustomerAsset {

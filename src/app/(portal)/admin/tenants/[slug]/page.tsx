@@ -14,17 +14,32 @@ type AdminTenantDetailPageProps = {
   params: Promise<{
     slug: string;
   }>;
+  searchParams?: Promise<{
+    createdUserEmail?: string;
+    setupToken?: string;
+  }>;
 };
 
-export default async function AdminTenantDetailPage({
+  export default async function AdminTenantDetailPage({
   params,
-}: AdminTenantDetailPageProps) {
+  searchParams,
+  }: AdminTenantDetailPageProps) {
   const { slug } = await params;
+  const query = searchParams ? await searchParams : {};
+
   const tenant = await getAdminTenantBySlug(slug);
 
   if (!tenant) {
     notFound();
   }
+
+  const setupToken = query.setupToken;
+  const createdUserEmail = query.createdUserEmail;
+
+  const setupPasswordUrl =
+    setupToken && createdUserEmail
+  	? `/set-password?token=${setupToken}`
+	: null;
 
   const activeUsers = tenant.users.filter((user) => user.isActive);
   const activeAssets = tenant.assets.filter((asset) => asset.isActive);
@@ -70,6 +85,35 @@ export default async function AdminTenantDetailPage({
           </span>
         </div>
       </section>
+	  {setupPasswordUrl && (
+	  <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6 text-emerald-900">
+		<div className="font-bold">Usuário criado com sucesso</div>
+		<p className="mt-1 text-sm leading-6">
+		  Envie o link abaixo para o usuário definir a senha inicial.
+		</p>
+
+		<div className="mt-4 rounded-2xl bg-white p-4">
+		  <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+			Usuário
+		  </div>
+		  <div className="mt-1 font-mono text-sm text-slate-800">
+			{createdUserEmail}
+		  </div>
+
+		  <div className="mt-4 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+			Link de definição de senha
+		  </div>
+		  <div className="mt-1 break-all font-mono text-sm text-slate-800">
+			{setupPasswordUrl}
+		  </div>
+		</div>
+
+		<p className="mt-3 text-xs leading-5 text-emerald-800">
+		  Este token expira em 24 horas. Na versão com envio de e-mail, este link
+		  será enviado automaticamente.
+		</p>
+	  </section>
+	)}
 
       <section className="grid gap-5 md:grid-cols-4">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">

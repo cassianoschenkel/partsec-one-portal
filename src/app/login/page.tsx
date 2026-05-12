@@ -5,12 +5,14 @@ type LoginPageProps = {
   searchParams?: Promise<{
     error?: string;
     callbackUrl?: string;
+    passwordSet?: string;
   }>;
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = searchParams ? await searchParams : {};
   const hasInvalidCredentials = params.error === "invalid_credentials";
+  const hasPasswordSetSuccess = params.passwordSet === "success";
   const callbackUrl = params.callbackUrl ?? "/dashboard";
 
   return (
@@ -88,6 +90,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                   Entre com suas credenciais para acessar o ambiente do cliente.
                 </p>
               </div>
+
+	      {hasPasswordSetSuccess && (
+	        <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+                 Senha definida com sucesso. Faça login para acessar o portal.
+	        </div>
+	      )}
 
               {hasInvalidCredentials && (
                 <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">

@@ -7,13 +7,14 @@ export default auth((request) => {
 
   const isLoggedIn = Boolean(session?.user);
   const isLoginPage = pathname === "/login";
+  const isSetPasswordPage = pathname === "/set-password";
   const isAdminRoute = pathname.startsWith("/admin");
 
-  if (isLoginPage && isLoggedIn) {
+  if ((isLoginPage || isSetPasswordPage) && isLoggedIn) {
     return NextResponse.redirect(new URL("/dashboard", request.nextUrl));
   }
 
-  if (!isLoginPage && !isLoggedIn) {
+  if (!isLoginPage && !isSetPasswordPage && !isLoggedIn) {
     const loginUrl = new URL("/login", request.nextUrl);
     loginUrl.searchParams.set("callbackUrl", pathname);
 

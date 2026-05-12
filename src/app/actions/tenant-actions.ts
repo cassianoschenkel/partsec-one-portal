@@ -1,5 +1,5 @@
 "use server";
-
+import { createPasswordSetupToken } from "@/lib/password-setup-token";
 import { getZabbixClientForTenant } from "@/lib/integrations/zabbix-client";
 import { encryptSecret } from "@/lib/crypto";
 import { redirect } from "next/navigation";
@@ -118,18 +118,24 @@ export async function createTenantUserAction(
     throw new Error("Já existe um usuário com este e-mail.");
   }
 
-  await prisma.user.create({
-    data: {
-      tenantId: tenant.id,
-      name,
-      email,
-      role: roleInput as UserRole,
-      passwordHash: null,
-      isActive: true,
-    },
-  });
+	const user = await prisma.user.create({
+	  data: {
+		tenantId: tenant.id,
+		name,
+		email,
+		role: roleInput as UserRole,
+		passwordHash: null,
+		isActive: true,
+	  },
+	});
 
-  redirect(`/admin/tenants/${tenant.slug}`);
+	const { rawToken } = await createPasswordSetupToken(user.id);
+
+	redirect(
+	  `/admin/tenants/${tenant.slug}?createdUserEmail=${encodeURIComponent(
+		user.email
+	  )}&setupToken=${rawToken}`
+	);
 }
 
 export async function createTenantAssetAction(
