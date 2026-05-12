@@ -17,6 +17,7 @@ type AdminTenantDetailPageProps = {
   searchParams?: Promise<{
     createdUserEmail?: string;
     setupToken?: string;
+    inviteSent?: string;
   }>;
 };
 
@@ -35,6 +36,7 @@ type AdminTenantDetailPageProps = {
 
   const setupToken = query.setupToken;
   const createdUserEmail = query.createdUserEmail;
+  const inviteSent = query.inviteSent;
 
   const appUrl = process.env.APP_URL?.replace(/\/+$/, "") ?? "";
 
@@ -91,9 +93,11 @@ type AdminTenantDetailPageProps = {
 	  <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6 text-emerald-900">
 		<div className="font-bold">Usuário criado com sucesso</div>
 		<p className="mt-1 text-sm leading-6">
-		  Envie o link abaixo para o usuário definir a senha inicial.
+		  {inviteSent === "true"
+		    ? "O convite de acesso foi enviado por e-mail. O link abaixo também pode ser usado como fallback operacional."
+		    : "Não foi possível enviar o convite por e-mail. Envie o link abaixo manualmente para o usuário definir a senha inicial."}
 		</p>
-
+		
 		<div className="mt-4 rounded-2xl bg-white p-4">
 		  <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
 			Usuário
@@ -111,9 +115,9 @@ type AdminTenantDetailPageProps = {
 		</div>
 
 		<p className="mt-3 text-xs leading-5 text-emerald-800">
-		  Este token expira em 24 horas. Na versão com envio de e-mail, este link
-		  será enviado automaticamente.
+		  Este token expira em 24 horas e só pode ser usado uma vez.
 		</p>
+		
 	  </section>
 	)}
 

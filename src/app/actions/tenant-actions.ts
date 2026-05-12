@@ -1,4 +1,7 @@
 "use server";
+
+import { sendEmail } from "@/lib/email/mailer";
+import { buildPasswordSetupEmail } from "@/lib/email/templates";
 import { createPasswordSetupToken } from "@/lib/password-setup-token";
 import { getZabbixClientForTenant } from "@/lib/integrations/zabbix-client";
 import { encryptSecret } from "@/lib/crypto";
@@ -131,11 +134,34 @@ export async function createTenantUserAction(
 
 	const { rawToken } = await createPasswordSetupToken(user.id);
 
-	redirect(
-	  `/admin/tenants/${tenant.slug}?createdUserEmail=${encodeURIComponent(
-		user.email
-	  )}&setupToken=${rawToken}`
-	);
+const appUrl = process.env.APP_URL?.replace(/\/+$/, "") ?? "";
+const setupUrl = `${appUrl}/set-password?token=${rawToken}`;
+
+const emailContent = buildPasswordSetupEmail({
+  userName: user.name,
+  tenantName: tenant.name,
+  setupUrl,
+});
+
+let inviteSent = "true";
+
+try {
+  await sendEmail({
+    to: user.email,
+    subject: emailContent.subject,
+    html: emailContent.html,
+    text: emailContent.text,
+  });
+} catch (error) {
+  inviteSent = "false";
+  console.error("Falha ao enviar convite de acesso:", error);
+}
+
+redirect(
+  `/admin/tenants/${tenant.slug}?createdUserEmail=${encodeURIComponent(
+    user.email
+  )}&setupToken=${rawToken}&inviteSent=${inviteSent}`
+);
 }
 
 export async function createTenantAssetAction(
