@@ -1,4 +1,6 @@
-import { getDemoTenantWithRelations } from "@/lib/queries/tenant";
+import { redirect } from "next/navigation";
+import { auth } from "@/../auth";
+import { getTenantWithRelationsById } from "@/lib/queries/tenant";
 import { MonitorCheck, Server, Shield, Wifi } from "lucide-react";
 
 function getAssetIcon(assetType: string) {
@@ -8,12 +10,30 @@ function getAssetIcon(assetType: string) {
 }
 
 export default async function AssetsPage() {
-  const tenant = await getDemoTenantWithRelations();
+  const session = await auth();
+
+  if (!session?.user) {
+    redirect("/login");
+  }
+
+  if (session.user.role === "PARTSEC_ADMIN") {
+    redirect("/admin/tenants");
+  }
+
+  if (!session.user.tenantId) {
+    return (
+      <div className="rounded-3xl border border-red-200 bg-red-50 p-8 text-red-800">
+        Usuário sem tenant vinculado.
+      </div>
+    );
+  }
+
+  const tenant = await getTenantWithRelationsById(session.user.tenantId);
 
   if (!tenant) {
     return (
       <div className="rounded-3xl border border-red-200 bg-red-50 p-8 text-red-800">
-        Tenant de demonstração não encontrado.
+        Tenant não encontrado.
       </div>
     );
   }
@@ -115,8 +135,8 @@ export default async function AssetsPage() {
               Próxima evolução
             </h3>
             <p className="text-sm text-slate-500">
-              Esta página poderá receber filtros por tipo, criticidade, status
-              de disponibilidade, grupo Zabbix e grupo Wazuh.
+              Esta página poderá cruzar os ativos cadastrados com dados reais do
+              Zabbix e Wazuh.
             </p>
           </div>
         </div>

@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
 
-export async function getDemoTenantDashboardData() {
+export async function getTenantDashboardDataById(tenantId: string) {
   const tenant = await prisma.tenant.findUnique({
     where: {
-      slug: "empresa-demonstracao",
+      id: tenantId,
     },
     include: {
       assets: {

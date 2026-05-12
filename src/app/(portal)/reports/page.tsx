@@ -1,14 +1,34 @@
-import { getDemoTenantWithRelations } from "@/lib/queries/tenant";
+import { redirect } from "next/navigation";
+import { auth } from "@/../auth";
+import { getTenantWithRelationsById } from "@/lib/queries/tenant";
 import { Download, FileText } from "lucide-react";
 
 export default async function ReportsPage() {
-  const tenant = await getDemoTenantWithRelations();
+  const session = await auth();
+
+  if (!session?.user) {
+    redirect("/login");
+  }
+
+  if (session.user.role === "PARTSEC_ADMIN") {
+    redirect("/admin/tenants");
+  }
+
+  if (!session.user.tenantId) {
+    return (
+      <div className="rounded-3xl border border-red-200 bg-red-50 p-8 text-red-800">
+        Usuário sem tenant vinculado.
+      </div>
+    );
+  }
+
+  const tenant = await getTenantWithRelationsById(session.user.tenantId);
 
   if (!tenant) {
     return (
-        <div className="rounded-3xl border border-red-200 bg-red-50 p-8 text-red-800">
-          Tenant de demonstração não encontrado.
-        </div>
+      <div className="rounded-3xl border border-red-200 bg-red-50 p-8 text-red-800">
+        Tenant não encontrado.
+      </div>
     );
   }
 
@@ -34,63 +54,63 @@ export default async function ReportsPage() {
   ];
 
   return (
-      <div className="space-y-8">
-        <section>
-          <h2 className="text-3xl font-bold tracking-tight text-slate-900">
-            Relatórios
-          </h2>
-          <p className="mt-2 text-slate-600">
-            Relatórios executivos e técnicos do ambiente monitorado para{" "}
-            <span className="font-semibold">{tenant.name}</span>.
-          </p>
-        </section>
+    <div className="space-y-8">
+      <section>
+        <h2 className="text-3xl font-bold tracking-tight text-slate-900">
+          Relatórios
+        </h2>
+        <p className="mt-2 text-slate-600">
+          Relatórios executivos e técnicos do ambiente monitorado para{" "}
+          <span className="font-semibold">{tenant.name}</span>.
+        </p>
+      </section>
 
-        <section className="grid gap-5 md:grid-cols-3">
-          {reports.map((report) => (
-            <div
-              key={report.title}
-              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
-            >
-              <div className="mb-5 flex items-center justify-between gap-4">
-                <div className="rounded-2xl bg-slate-100 p-3">
-                  <FileText className="h-6 w-6 text-slate-800" />
-                </div>
-
-                <span className="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
-                  {report.status}
-                </span>
+      <section className="grid gap-5 md:grid-cols-3">
+        {reports.map((report) => (
+          <div
+            key={report.title}
+            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+          >
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div className="rounded-2xl bg-slate-100 p-3">
+                <FileText className="h-6 w-6 text-slate-800" />
               </div>
 
-              <h3 className="font-bold text-slate-900">{report.title}</h3>
-
-              <div className="mt-3 space-y-1 text-sm text-slate-500">
-                <div>Período: {report.period}</div>
-                <div>Tipo: {report.type}</div>
-              </div>
-
-              <button
-                type="button"
-                className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#071426] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#0f2544] disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={report.status !== "Disponível"}
-              >
-                <Download className="h-4 w-4" />
-                Baixar relatório
-              </button>
+              <span className="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                {report.status}
+              </span>
             </div>
-          ))}
-        </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-900">
-            Estratégia para relatórios
-          </h3>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            No MVP, os relatórios podem ser arquivos PDF gerados pela equipe
-            Partsec e vinculados ao tenant. Em uma fase posterior, o portal pode
-            gerar relatórios automaticamente a partir de dados normalizados de
-            Zabbix, Wazuh e Zammad.
-          </p>
-        </section>
-      </div>
+            <h3 className="font-bold text-slate-900">{report.title}</h3>
+
+            <div className="mt-3 space-y-1 text-sm text-slate-500">
+              <div>Período: {report.period}</div>
+              <div>Tipo: {report.type}</div>
+            </div>
+
+            <button
+              type="button"
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#071426] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#0f2544] disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={report.status !== "Disponível"}
+            >
+              <Download className="h-4 w-4" />
+              Baixar relatório
+            </button>
+          </div>
+        ))}
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h3 className="text-lg font-bold text-slate-900">
+          Estratégia para relatórios
+        </h3>
+        <p className="mt-2 text-sm leading-6 text-slate-500">
+          No MVP, os relatórios podem ser arquivos PDF gerados pela equipe
+          Partsec e vinculados ao tenant. Em uma fase posterior, o portal pode
+          gerar relatórios automaticamente a partir de dados normalizados de
+          Zabbix, Wazuh e Zammad.
+        </p>
+      </section>
+    </div>
   );
 }
