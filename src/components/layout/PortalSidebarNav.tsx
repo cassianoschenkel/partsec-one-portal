@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { UserRole } from "@/generated/prisma/client";
 import {
   Bell,
   Database,
@@ -29,7 +30,7 @@ const menuItems = [
     icon: Bell,
   },
   {
-    label: "Chamados",
+    label: "Suporte",
     href: "/tickets",
     icon: Ticket,
   },
@@ -44,18 +45,30 @@ const menuItems = [
     icon: Settings,
   },
   {
-  label: "Admin",
-  href: "/admin/tenants",
-  icon: Database,
+    label: "Admin",
+    href: "/admin/tenants",
+    icon: Database,
   },
 ];
 
-export function PortalSidebarNav() {
+type PortalSidebarNavProps = {
+  userRole?: UserRole;
+};
+
+export function PortalSidebarNav({ userRole }: PortalSidebarNavProps) {
   const pathname = usePathname();
+
+  const visibleMenuItems = menuItems.filter((item) => {
+    if (item.href.startsWith("/admin")) {
+      return userRole === "PARTSEC_ADMIN";
+    }
+
+    return true;
+  });
 
   return (
     <nav className="flex-1 space-y-1 px-4 py-6">
-      {menuItems.map((item) => {
+      {visibleMenuItems.map((item) => {
         const Icon = item.icon;
         const isActive =
           pathname === item.href || pathname.startsWith(`${item.href}/`);

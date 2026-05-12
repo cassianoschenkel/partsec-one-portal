@@ -1,3 +1,4 @@
+import type { UserRole } from "@/generated/prisma/client";
 import { logoutAction } from "@/app/actions/auth-actions";
 import { ShieldCheck } from "lucide-react";
 import { PortalSidebarNav } from "@/components/layout/PortalSidebarNav";
@@ -7,12 +8,18 @@ import { PortalSidebarNav } from "@/components/layout/PortalSidebarNav";
 	  children: React.ReactNode;
 	  tenantName?: string;
 	  tenantInitials?: string;
+	  userName?: string;
+	  userEmail?: string;
+	  userRole?: UserRole;
 	};
 
 	export function PortalLayout({
 	  children,
 	  tenantName = "Partsec One",
 	  tenantInitials = "PO",
+	  userName = "Usuário",
+	  userEmail = "",
+	  userRole,
 	}: PortalLayoutProps) {
   return (
     <div className="min-h-screen bg-slate-100">
@@ -36,7 +43,7 @@ import { PortalSidebarNav } from "@/components/layout/PortalSidebarNav";
           </div>
         </div>
 
-        <PortalSidebarNav />
+        <PortalSidebarNav userRole={userRole} />
 
         <div className="border-t border-white/10 px-6 py-5">
           <div className="rounded-2xl bg-white/5 p-4">
@@ -62,20 +69,28 @@ import { PortalSidebarNav } from "@/components/layout/PortalSidebarNav";
             </div>
 		<div className="flex items-center gap-3">
 		  <div className="rounded-full bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
-		    Operação normal
+			Operação normal
+		  </div>
+
+		  <div className="hidden text-right md:block">
+			<div className="text-sm font-bold text-slate-900">{userName}</div>
+			<div className="text-xs text-slate-500">
+			  {userRole ?? "Perfil não definido"}
+			  {userEmail ? ` · ${userEmail}` : ""}
+			</div>
 		  </div>
 
 		  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
-		    {tenantInitials}
+			{tenantInitials}
 		  </div>
 
 		  <form action={logoutAction}>
-		    <button
-		      type="submit"
-		      className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
-		    >
-		      Sair
-		    </button>
+			<button
+			  type="submit"
+			  className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+			>
+			  Sair
+			</button>
 		  </form>
 		</div>
           </div>
