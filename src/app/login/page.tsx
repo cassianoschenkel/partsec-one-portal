@@ -4,12 +4,14 @@ import { LockKeyhole, ShieldCheck } from "lucide-react";
 type LoginPageProps = {
   searchParams?: Promise<{
     error?: string;
+    callbackUrl?: string;
   }>;
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = searchParams ? await searchParams : {};
   const hasInvalidCredentials = params.error === "invalid_credentials";
+  const callbackUrl = params.callbackUrl ?? "/dashboard";
 
   return (
     <main className="min-h-screen bg-[#071426]">
@@ -94,6 +96,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               )}
 
               <form action={loginAction} className="space-y-5">
+		<input type="hidden" name="callbackUrl" value={callbackUrl} />
                 <div>
                   <label
                     htmlFor="email"

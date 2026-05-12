@@ -5,11 +5,13 @@ import { redirect } from "next/navigation";
 import { signIn, signOut } from "@/../auth";
 
 export async function loginAction(formData: FormData) {
+  const callbackUrl = String(formData.get("callbackUrl") ?? "/dashboard");
+
   try {
     await signIn("credentials", {
       email: String(formData.get("email") ?? ""),
       password: String(formData.get("password") ?? ""),
-      redirectTo: "/dashboard",
+      redirectTo: callbackUrl || "/dashboard",
     });
   } catch (error) {
     if (error instanceof AuthError) {

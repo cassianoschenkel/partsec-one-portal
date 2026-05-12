@@ -1,3 +1,4 @@
+import { logoutAction } from "@/app/actions/auth-actions";
 import { ShieldCheck } from "lucide-react";
 import { PortalSidebarNav } from "@/components/layout/PortalSidebarNav";
 
@@ -59,15 +60,24 @@ import { PortalSidebarNav } from "@/components/layout/PortalSidebarNav";
                 {tenantName}
               </h1>
             </div>
+		<div className="flex items-center gap-3">
+		  <div className="rounded-full bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
+		    Operação normal
+		  </div>
 
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
-                Operação normal
-              </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
-                {tenantInitials}
-              </div>
-            </div>
+		  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
+		    {tenantInitials}
+		  </div>
+
+		  <form action={logoutAction}>
+		    <button
+		      type="submit"
+		      className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+		    >
+		      Sair
+		    </button>
+		  </form>
+		</div>
           </div>
         </header>
 
