@@ -24,10 +24,7 @@ function inferAssetTypeFromName(name: string, host: string): AssetType {
     return AssetType.SWITCH;
   }
 
-  if (
-    value.includes("router") ||
-    value.includes("roteador")
-  ) {
+  if (value.includes("router") || value.includes("roteador")) {
     return AssetType.ROUTER;
   }
 
@@ -68,6 +65,13 @@ function inferAssetTypeFromName(name: string, host: string): AssetType {
   return AssetType.SERVER;
 }
 
+function getInterfaceIp(snapshot: {
+  interfaceIp: string | null;
+  interfaceDns: string | null;
+}) {
+  return snapshot.interfaceIp || snapshot.interfaceDns || null;
+}
+
 async function importAssetsForTenant(tenantId: string, tenantSlug: string) {
   const snapshots = await prisma.zabbixHostSnapshot.findMany({
     where: {
@@ -79,9 +83,13 @@ async function importAssetsForTenant(tenantId: string, tenantSlug: string) {
   });
 
   let created = 0;
-  let skipped = 0;
+  let updated = 0;
+  let unchanged = 0;
 
   for (const snapshot of snapshots) {
+    const hostname = snapshot.host || snapshot.name;
+    const ipAddress = getInterfaceIp(snapshot);
+
     const existingAsset = await prisma.customerAsset.findFirst({
       where: {
         tenantId,
@@ -89,34 +97,53 @@ async function importAssetsForTenant(tenantId: string, tenantSlug: string) {
       },
     });
 
-    if (existingAsset) {
-      skipped += 1;
+    if (!existingAsset) {
+      await prisma.customerAsset.create({
+        data: {
+          tenantId,
+          name: snapshot.name || snapshot.host,
+          hostname,
+          ipAddress,
+          assetType: inferAssetTypeFromName(snapshot.name, snapshot.host),
+          operatingSystem: null,
+          description:
+            "Ativo importado automaticamente a partir do snapshot Zabbix.",
+          zabbixHostId: snapshot.zabbixHostId,
+          wazuhAgentId: null,
+          isActive: true,
+        },
+      });
+
+      created += 1;
       continue;
     }
 
-    const interfaceIp = snapshot.interfaceIp ?? null;
-    const hostname = snapshot.host || snapshot.name;
+    const shouldUpdate =
+      existingAsset.hostname !== hostname ||
+      existingAsset.ipAddress !== ipAddress ||
+      existingAsset.zabbixHostId !== snapshot.zabbixHostId;
 
-    await prisma.customerAsset.create({
+    if (!shouldUpdate) {
+      unchanged += 1;
+      continue;
+    }
+
+    await prisma.customerAsset.update({
+      where: {
+        id: existingAsset.id,
+      },
       data: {
-        tenantId,
-        name: snapshot.name || snapshot.host,
         hostname,
-        ipAddress: interfaceIp,
-        assetType: inferAssetTypeFromName(snapshot.name, snapshot.host),
-        operatingSystem: null,
-        description: "Ativo importado automaticamente a partir do snapshot Zabbix.",
+        ipAddress,
         zabbixHostId: snapshot.zabbixHostId,
-        wazuhAgentId: null,
-        isActive: true,
       },
     });
 
-    created += 1;
+    updated += 1;
   }
 
   console.log(
-    `[${tenantSlug}] snapshots: ${snapshots.length}, criados: ${created}, ignorados: ${skipped}`
+    `[${tenantSlug}] snapshots: ${snapshots.length}, criados: ${created}, atualizados: ${updated}, sem alterações: ${unchanged}`
   );
 }
 
@@ -160,7 +187,7 @@ async function main() {
 
 main()
   .catch((error) => {
-    console.error("Falha ao importar ativos do Zabbix:");
+    console.error("Falha ao importar/atualizar ativos do Zabbix:");
     console.error(error);
     process.exit(1);
   })
