@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/../auth";
 import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
-import { ZabbixCustomerOverview } from "@/components/dashboard/ZabbixCustomerOverview";
+import { ZabbixSnapshotOverview } from "@/components/dashboard/ZabbixSnapshotOverview";
 import { getTenantDashboardDataById } from "@/lib/queries/dashboard";
-import { getCustomerZabbixOverview } from "@/lib/queries/customer-zabbix";
+import { getCustomerZabbixSnapshotOverview } from "@/lib/queries/customer-zabbix-snapshot";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -34,7 +34,7 @@ export default async function DashboardPage() {
     );
   }
 
-  const zabbix = await getCustomerZabbixOverview(data.tenant.slug);
+  const zabbixSnapshot = await getCustomerZabbixSnapshotOverview(data.tenant.id);
 
   return (
     <div className="space-y-8">
@@ -45,7 +45,7 @@ export default async function DashboardPage() {
         integrations={data.integrations}
       />
 
-      <ZabbixCustomerOverview zabbix={zabbix} />
+      <ZabbixSnapshotOverview snapshot={zabbixSnapshot} />
     </div>
   );
 }
