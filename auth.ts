@@ -66,25 +66,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.tenantId = user.tenantId;
-        token.role = user.role;
-      }
+  async jwt({ token, user }) {
+    if (user) {
+      token.id = String(user.id);
+      token.tenantId = user.tenantId ?? null;
+      token.role = user.role;
+      token.name = user.name;
+      token.email = user.email;
+    }
 
-      return token;
-    },
-    async session({ session, token }) {
-      session.user = {
-        id: token.id,
-        name: session.user?.name ?? "",
-        email: session.user?.email ?? "",
-        tenantId: token.tenantId,
-        role: token.role,
-      };
-
-      return session;
-    },
+    return token;
   },
+  async session({ session, token }) {
+  session.user.id = String(token.id);
+  session.user.name = String(token.name ?? "");
+  session.user.email = String(token.email ?? "");
+  session.user.tenantId = token.tenantId ?? null;
+  session.user.role = token.role;
+
+  return session;
+  },
+ },
 });
