@@ -78,7 +78,8 @@ export async function syncTenantZabbix({
     }
 
     for (const problem of data.problems) {
-	  const firstHost = problem.hosts?.[0] ?? null;
+      const firstHost = problem.hosts?.[0] ?? null;
+
       await prisma.zabbixProblemSnapshot.upsert({
         where: {
           tenantId_eventId: {
