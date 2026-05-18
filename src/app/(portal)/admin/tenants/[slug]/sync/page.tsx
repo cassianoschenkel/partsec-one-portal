@@ -123,19 +123,20 @@ export default async function AdminTenantSyncPage({
         }
       />
 
-      {query.syncStatus === "success" && (
-        <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6 text-emerald-800">
-          <div className="flex items-start gap-3">
-            <CheckCircle2 className="mt-0.5 h-5 w-5" />
-            <div>
-              <div className="font-bold">Sincronização executada</div>
-              <p className="mt-1 text-sm">
-                A sincronização Zabbix foi executada com sucesso.
-              </p>
-            </div>
-          </div>
-        </section>
-      )}
+    {query.syncStatus === "success" && (
+	  <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6 text-emerald-800">
+		<div className="flex items-start gap-3">
+		  <CheckCircle2 className="mt-0.5 h-5 w-5" />
+		  <div>
+			<div className="font-bold">Sincronização executada</div>
+			<p className="mt-1 text-sm">
+			  {query.message ??
+				"A sincronização Zabbix foi executada com sucesso."}
+			</p>
+		  </div>
+		</div>
+	  </section>
+	)}
 
       {query.syncStatus === "error" && (
         <section className="rounded-3xl border border-red-200 bg-red-50 p-6 text-red-800">
