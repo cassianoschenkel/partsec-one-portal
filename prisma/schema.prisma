@@ -191,6 +191,11 @@ model ZabbixProblemSnapshot {
   severity      String
   clock         String
   acknowledged  String
+
+  zabbixHostId      String?
+  hostName          String?
+  hostTechnicalName String?
+
   rawData       Json?
 
   tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)

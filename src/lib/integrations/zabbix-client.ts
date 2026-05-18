@@ -36,13 +36,26 @@ export type ZabbixHost = {
   }>;
 };
 
+export type ZabbixProblemHost = {
+  hostid: string;
+  host: string;
+  name: string;
+};
+
 export type ZabbixProblem = {
   eventid: string;
-  objectid: string;
+  objectid?: string;
   name: string;
   severity: string;
   clock: string;
   acknowledged: string;
+  hosts?: ZabbixProblemHost[];
+};
+
+export type ZabbixTriggerWithHosts = {
+  triggerid: string;
+  description: string;
+  hosts?: ZabbixProblemHost[];
 };
 
 export class ZabbixClient {
@@ -114,13 +127,25 @@ export class ZabbixClient {
 
   async getProblemsByGroupId(groupId: string) {
     return this.call<ZabbixProblem[]>("problem.get", {
-      output: "extend",
-      groupids: [groupId],
+      output: ["eventid", "objectid", "name", "severity", "clock", "acknowledged"],
+	  groupids: [groupId],
       sortfield: ["eventid"],
       sortorder: "DESC",
       recent: true,
     });
   }
+  
+async getTriggersByIds(triggerIds: string[]) {
+  if (triggerIds.length === 0) {
+    return [];
+  }
+
+  return this.call<ZabbixTriggerWithHosts[]>("trigger.get", {
+    triggerids: triggerIds,
+    output: ["triggerid", "description"],
+    selectHosts: ["hostid", "host", "name"],
+  });
+}
 
   async getHostsByGroupId(groupId: string) {
     return this.call<ZabbixHost[]>("host.get", {

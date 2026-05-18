@@ -227,14 +227,15 @@ export default async function AlertsPage() {
         <div className="overflow-hidden rounded-2xl border border-slate-200">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-slate-500">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Evento</th>
-                <th className="px-4 py-3 font-semibold">Severidade</th>
-                <th className="px-4 py-3 font-semibold">Problema</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
-                <th className="px-4 py-3 font-semibold">Horário</th>
-                <th className="px-4 py-3 font-semibold">Sync</th>
-              </tr>
+			<tr>
+			  <th className="px-4 py-3 font-semibold">Evento</th>
+			  <th className="px-4 py-3 font-semibold">Severidade</th>
+			  <th className="px-4 py-3 font-semibold">Ativo</th>
+			  <th className="px-4 py-3 font-semibold">Problema</th>
+			  <th className="px-4 py-3 font-semibold">Status</th>
+			  <th className="px-4 py-3 font-semibold">Horário</th>
+			  <th className="px-4 py-3 font-semibold">Sync</th>
+			</tr>
             </thead>
 
             <tbody className="divide-y divide-slate-100 bg-white">
@@ -253,6 +254,20 @@ export default async function AlertsPage() {
                     >
                       {getSeverityLabel(problem.severity)}
                     </span>
+                  </td>
+				  
+				  <td className="px-4 py-3">
+                    <div className="font-semibold text-slate-900">
+                      {problem.asset?.name ??
+                        problem.hostName ??
+                        "Ativo não identificado"}
+                    </div>
+                    <div className="mt-1 font-mono text-xs text-slate-500">
+                      {problem.asset?.ipAddress ??
+                        problem.hostTechnicalName ??
+                        problem.zabbixHostId ??
+                        "-"}
+                    </div>
                   </td>
 
                   <td className="px-4 py-3 font-medium text-slate-900">
@@ -276,7 +291,7 @@ export default async function AlertsPage() {
               {data.problems.length === 0 && (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-4 py-10 text-center text-slate-500"
                   >
                     Nenhum problema ativo sincronizado do Zabbix.
