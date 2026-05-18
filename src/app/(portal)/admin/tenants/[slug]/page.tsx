@@ -377,6 +377,13 @@ type AdminTenantDetailPageProps = {
   >
 	    Ver Zabbix
 	    </Link>
+		
+		<Link
+		  href={`/admin/tenants/${tenant.slug}/sync`}
+		  className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100"
+  >
+		  Sincronizações
+		</Link>
 
 	    <Link
 	      href={`/admin/tenants/${tenant.slug}/integrations`}
