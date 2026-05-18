@@ -76,9 +76,27 @@ export async function syncTenantZabbix({
         },
       });
     }
+	
+	function findHostFallbackByProblemName(problemName: string) {
+      const normalizedProblemName = problemName.toLowerCase();
 
+      return (
+        data.hosts.find((host) => {
+          const hostName = host.name?.toLowerCase() ?? "";
+          const technicalName = host.host?.toLowerCase() ?? "";
+
+          return (
+            (hostName && normalizedProblemName.includes(hostName)) ||
+            (technicalName && normalizedProblemName.includes(technicalName))
+          );
+        }) ?? null
+      );
+    }
+	
     for (const problem of data.problems) {
-      const firstHost = problem.hosts?.[0] ?? null;
+        const firstHost =
+			problem.hosts?.[0] ??
+			findHostFallbackByProblemName(problem.name);
 
       await prisma.zabbixProblemSnapshot.upsert({
         where: {
