@@ -1,6 +1,7 @@
 import type { getCustomerZabbixSnapshotOverview } from "@/lib/queries/customer-zabbix-snapshot";
 import {
   AlertTriangle,
+  CheckCircle2,
   Clock,
   MonitorCheck,
   Server,
@@ -46,10 +47,24 @@ function formatDate(date?: Date | null) {
   return date.toLocaleString("pt-BR");
 }
 
+function getProblemStatusLabel(problem: {
+  status?: string | null;
+  acknowledged: string;
+}) {
+  if (problem.status === "RESOLVED") {
+    return "Resolvido";
+  }
+
+  if (problem.acknowledged === "1") {
+    return "Reconhecido";
+  }
+
+  return "Aberto";
+}
+
 export function ZabbixSnapshotOverview({
   snapshot,
 }: ZabbixSnapshotOverviewProps) {
-  const monitoredHosts = snapshot.hosts.filter((host) => host.status === "0");
   const lastSync = snapshot.lastSync;
 
   if (!snapshot.ok) {
@@ -75,15 +90,25 @@ export function ZabbixSnapshotOverview({
     );
   }
 
+  const generalStatus =
+    snapshot.summary.openProblems === 0
+      ? "Ambiente sem alertas ativos"
+      : snapshot.summary.criticalOpenProblems > 0
+        ? "Ambiente com alertas críticos"
+        : snapshot.summary.highOpenProblems > 0
+          ? "Ambiente com alertas altos"
+          : "Ambiente com alertas ativos";
+
   return (
     <section className="space-y-6">
       <div className="flex items-start justify-between gap-6">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-            Monitoramento Zabbix
+            Resumo operacional
           </h2>
           <p className="mt-2 text-slate-600">
-            Dados consolidados a partir da última sincronização com o Zabbix.
+            {generalStatus}. Dados consolidados a partir da última
+            sincronização com o Zabbix.
           </p>
         </div>
 
@@ -111,28 +136,28 @@ export function ZabbixSnapshotOverview({
         </div>
       )}
 
-      <div className="grid gap-5 md:grid-cols-3">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-4 w-fit rounded-2xl bg-slate-100 p-3">
-            <MonitorCheck className="h-6 w-6 text-slate-800" />
-          </div>
-          <div className="text-sm font-medium text-slate-500">
-            Hosts monitorados
-          </div>
-          <div className="mt-2 text-3xl font-bold text-slate-950">
-            {monitoredHosts.length}
-          </div>
-        </div>
-
+      <div className="grid gap-5 md:grid-cols-3 xl:grid-cols-6">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-4 w-fit rounded-2xl bg-slate-100 p-3">
             <Server className="h-6 w-6 text-slate-800" />
           </div>
           <div className="text-sm font-medium text-slate-500">
-            Total de hosts
+            Total de ativos
           </div>
           <div className="mt-2 text-3xl font-bold text-slate-950">
-            {snapshot.hosts.length}
+            {snapshot.summary.totalHosts}
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 w-fit rounded-2xl bg-emerald-50 p-3">
+            <MonitorCheck className="h-6 w-6 text-emerald-700" />
+          </div>
+          <div className="text-sm font-medium text-slate-500">
+            Monitorados
+          </div>
+          <div className="mt-2 text-3xl font-bold text-emerald-700">
+            {snapshot.summary.monitoredHosts}
           </div>
         </div>
 
@@ -141,10 +166,46 @@ export function ZabbixSnapshotOverview({
             <ShieldAlert className="h-6 w-6 text-red-700" />
           </div>
           <div className="text-sm font-medium text-slate-500">
-            Problemas recentes
+            Críticos abertos
           </div>
           <div className="mt-2 text-3xl font-bold text-red-700">
-            {snapshot.problems.length}
+            {snapshot.summary.criticalOpenProblems}
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 w-fit rounded-2xl bg-orange-50 p-3">
+            <AlertTriangle className="h-6 w-6 text-orange-700" />
+          </div>
+          <div className="text-sm font-medium text-slate-500">
+            Altos abertos
+          </div>
+          <div className="mt-2 text-3xl font-bold text-orange-700">
+            {snapshot.summary.highOpenProblems}
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 w-fit rounded-2xl bg-amber-50 p-3">
+            <AlertTriangle className="h-6 w-6 text-amber-700" />
+          </div>
+          <div className="text-sm font-medium text-slate-500">
+            Abertos
+          </div>
+          <div className="mt-2 text-3xl font-bold text-amber-700">
+            {snapshot.summary.openProblems}
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 w-fit rounded-2xl bg-emerald-50 p-3">
+            <CheckCircle2 className="h-6 w-6 text-emerald-700" />
+          </div>
+          <div className="text-sm font-medium text-slate-500">
+            Resolvidos 24h
+          </div>
+          <div className="mt-2 text-3xl font-bold text-emerald-700">
+            {snapshot.summary.resolvedLast24h}
           </div>
         </div>
       </div>
@@ -156,7 +217,7 @@ export function ZabbixSnapshotOverview({
               <Server className="h-6 w-6 text-slate-800" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900">Hosts monitorados</h3>
+              <h3 className="font-bold text-slate-900">Ativos monitorados</h3>
               <p className="text-sm text-slate-500">
                 Primeiros hosts sincronizados do grupo Zabbix do cliente.
               </p>
@@ -203,10 +264,10 @@ export function ZabbixSnapshotOverview({
             </div>
             <div>
               <h3 className="font-bold text-slate-900">
-                Problemas recentes
+                Alertas recentes
               </h3>
               <p className="text-sm text-slate-500">
-                Eventos sincronizados do Zabbix.
+                Eventos abertos ou resolvidos nas últimas 24h.
               </p>
             </div>
           </div>
@@ -226,12 +287,14 @@ export function ZabbixSnapshotOverview({
                       {problem.name}
                     </div>
                     <div className="mt-1 text-xs text-slate-500">
-                      {formatZabbixDate(problem.clock)}
+                      {problem.status === "RESOLVED" && problem.resolvedAt
+                        ? `Resolvido em ${formatDate(problem.resolvedAt)}`
+                        : formatZabbixDate(problem.clock)}
                     </div>
                   </div>
 
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
-                    {problem.acknowledged === "1" ? "Reconhecido" : "Aberto"}
+                    {getProblemStatusLabel(problem)}
                   </span>
                 </div>
               </div>
@@ -239,7 +302,7 @@ export function ZabbixSnapshotOverview({
 
             {snapshot.problems.length === 0 && (
               <div className="rounded-2xl bg-emerald-50 p-6 text-center text-sm font-semibold text-emerald-700">
-                Nenhum problema recente sincronizado.
+                Nenhum alerta recente no período.
               </div>
             )}
           </div>
