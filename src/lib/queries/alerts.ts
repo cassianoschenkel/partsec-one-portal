@@ -1,6 +1,31 @@
 import { prisma } from "@/lib/prisma";
 
-export async function getTenantZabbixAlertsOverview(tenantId: string) {
+export type AlertsDateRange = {
+  startDate: Date;
+  endDate: Date;
+};
+
+export function getDefaultAlertsDateRange(): AlertsDateRange {
+  const endDate = new Date();
+  const startDate = new Date(endDate.getTime() - 24 * 60 * 60 * 1000);
+
+  return {
+    startDate,
+    endDate,
+  };
+}
+
+function toZabbixClock(date: Date) {
+  return Math.floor(date.getTime() / 1000).toString();
+}
+
+export async function getTenantZabbixAlertsOverview(
+  tenantId: string,
+  range: AlertsDateRange
+) {
+  const startClock = toZabbixClock(range.startDate);
+  const endClock = toZabbixClock(range.endDate);
+
   const [tenant, problems, assets, lastSync] = await Promise.all([
     prisma.tenant.findUnique({
       where: {
@@ -11,11 +36,25 @@ export async function getTenantZabbixAlertsOverview(tenantId: string) {
     prisma.zabbixProblemSnapshot.findMany({
       where: {
         tenantId,
+        OR: [
+          {
+            clock: {
+              gte: startClock,
+              lte: endClock,
+            },
+          },
+          {
+            resolvedAt: {
+              gte: range.startDate,
+              lte: range.endDate,
+            },
+          },
+        ],
       },
       orderBy: {
         clock: "desc",
       },
-      take: 100,
+      take: 250,
     }),
 
     prisma.customerAsset.findMany({
@@ -60,32 +99,37 @@ export async function getTenantZabbixAlertsOverview(tenantId: string) {
     };
   });
 
-  const criticalProblems = enrichedProblems.filter(
+  const openProblems = enrichedProblems.filter(
+    (problem) => problem.status !== "RESOLVED"
+  );
+
+  const resolvedProblems = enrichedProblems.filter(
+    (problem) => problem.status === "RESOLVED"
+  );
+
+  const criticalProblems = openProblems.filter(
     (problem) => problem.severity === "5"
   );
-  const highProblems = enrichedProblems.filter(
+
+  const highProblems = openProblems.filter(
     (problem) => problem.severity === "4"
   );
-  const mediumProblems = enrichedProblems.filter(
-    (problem) => problem.severity === "3"
-  );
-  const acknowledgedProblems = enrichedProblems.filter(
+
+  const acknowledgedProblems = openProblems.filter(
     (problem) => problem.acknowledged === "1"
-  );
-  const openProblems = enrichedProblems.filter(
-    (problem) => problem.acknowledged !== "1"
   );
 
   return {
     tenant,
     problems: enrichedProblems,
     lastSync,
+    range,
     summary: {
       total: enrichedProblems.length,
+      open: openProblems.length,
+      resolved: resolvedProblems.length,
       critical: criticalProblems.length,
       high: highProblems.length,
-      medium: mediumProblems.length,
-      open: openProblems.length,
       acknowledged: acknowledgedProblems.length,
     },
   };

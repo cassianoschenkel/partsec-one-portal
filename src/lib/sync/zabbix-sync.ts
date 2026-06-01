@@ -43,6 +43,7 @@ export async function syncTenantZabbix({
   try {
     const data = await getTenantZabbixOverview(tenantSlug);
     const syncedAt = new Date();
+    const currentProblemEventIds = data.problems.map((problem) => problem.eventid);
 
     for (const host of data.hosts) {
       const firstInterface = host.interfaces?.[0];
@@ -114,6 +115,9 @@ export async function syncTenantZabbix({
           zabbixHostId: firstHost?.hostid ?? null,
           hostName: firstHost?.name ?? null,
           hostTechnicalName: firstHost?.host ?? null,
+	  status: "OPEN",
+	  resolvedAt: null,
+	  lastSeenAt: syncedAt,
           rawData: problem,
           syncedAt,
         },
@@ -128,11 +132,28 @@ export async function syncTenantZabbix({
           zabbixHostId: firstHost?.hostid ?? null,
           hostName: firstHost?.name ?? null,
           hostTechnicalName: firstHost?.host ?? null,
+	  status: "OPEN",
+	  resolvedAt: null,
+	  lastSeenAt: syncedAt,
           rawData: problem,
           syncedAt,
         },
       });
     }
+    await prisma.zabbixProblemSnapshot.updateMany({
+      where: {
+       tenantId,
+       status: "OPEN",
+       eventId: {
+        notIn: currentProblemEventIds,
+       },
+    },
+    data: {
+      status: "RESOLVED",
+      resolvedAt: syncedAt,
+      syncedAt,
+    },
+  });
 
     const finishedAt = new Date();
     const durationMs = Date.now() - startTime;

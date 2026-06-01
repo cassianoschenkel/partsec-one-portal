@@ -196,6 +196,10 @@ model ZabbixProblemSnapshot {
   hostName          String?
   hostTechnicalName String?
 
+  status     String   @default("OPEN")
+  resolvedAt DateTime?
+  lastSeenAt DateTime?
+
   rawData       Json?
 
   tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)

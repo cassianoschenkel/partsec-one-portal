@@ -1,13 +1,24 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/../auth";
-import { getTenantZabbixAlertsOverview } from "@/lib/queries/alerts";
+import {
+  getDefaultAlertsDateRange,
+  getTenantZabbixAlertsOverview,
+} from "@/lib/queries/alerts";
 import {
   AlertTriangle,
   CheckCircle2,
   Clock,
+  Filter,
   ShieldAlert,
   Siren,
 } from "lucide-react";
+
+type AlertsPageProps = {
+  searchParams?: Promise<{
+    start?: string;
+    end?: string;
+  }>;
+};
 
 function getSeverityLabel(severity: string) {
   const labels: Record<string, string> = {
@@ -60,7 +71,56 @@ function formatDate(date?: Date | null) {
   return date.toLocaleString("pt-BR");
 }
 
-export default async function AlertsPage() {
+function parseDateInput(value?: string) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date;
+}
+
+function toDateTimeLocalValue(date: Date) {
+  const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
+function getProblemStatusLabel(problem: {
+  status?: string | null;
+  acknowledged: string;
+}) {
+  if (problem.status === "RESOLVED") {
+    return "Resolvido";
+  }
+
+  if (problem.acknowledged === "1") {
+    return "Reconhecido";
+  }
+
+  return "Aberto";
+}
+
+function getProblemStatusClass(problem: {
+  status?: string | null;
+  acknowledged: string;
+}) {
+  if (problem.status === "RESOLVED") {
+    return "text-emerald-700";
+  }
+
+  if (problem.acknowledged === "1") {
+    return "text-blue-700";
+  }
+
+  return "text-slate-600";
+}
+
+export default async function AlertsPage({ searchParams }: AlertsPageProps) {
   const session = await auth();
 
   if (!session?.user) {
@@ -79,7 +139,16 @@ export default async function AlertsPage() {
     );
   }
 
-  const data = await getTenantZabbixAlertsOverview(session.user.tenantId);
+  const params = searchParams ? await searchParams : {};
+  const defaultRange = getDefaultAlertsDateRange();
+
+  const startDate = parseDateInput(params.start) ?? defaultRange.startDate;
+  const endDate = parseDateInput(params.end) ?? defaultRange.endDate;
+
+  const data = await getTenantZabbixAlertsOverview(session.user.tenantId, {
+    startDate,
+    endDate,
+  });
 
   if (!data) {
     return (
@@ -147,14 +216,69 @@ export default async function AlertsPage() {
         </section>
       )}
 
-      <section className="grid gap-5 md:grid-cols-5">
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="rounded-2xl bg-slate-100 p-3">
+            <Filter className="h-5 w-5 text-slate-700" />
+          </div>
+          <div>
+            <h3 className="font-bold text-slate-900">Filtro de período</h3>
+            <p className="text-sm text-slate-500">
+              Por padrão, a tela exibe alertas das últimas 24 horas.
+            </p>
+          </div>
+        </div>
+
+        <form className="grid gap-4 md:grid-cols-[1fr_1fr_auto]" method="GET">
+          <div>
+            <label
+              htmlFor="start"
+              className="mb-2 block text-sm font-semibold text-slate-700"
+            >
+              Início
+            </label>
+            <input
+              id="start"
+              name="start"
+              type="datetime-local"
+              defaultValue={toDateTimeLocalValue(startDate)}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="end"
+              className="mb-2 block text-sm font-semibold text-slate-700"
+            >
+              Fim
+            </label>
+            <input
+              id="end"
+              name="end"
+              type="datetime-local"
+              defaultValue={toDateTimeLocalValue(endDate)}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900"
+            />
+          </div>
+
+          <div className="flex items-end">
+            <button
+              type="submit"
+              className="w-full rounded-2xl bg-[#071426] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#0f2544]"
+            >
+              Aplicar filtro
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section className="grid gap-5 md:grid-cols-3 xl:grid-cols-6">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-4 w-fit rounded-2xl bg-slate-100 p-3">
             <ShieldAlert className="h-6 w-6 text-slate-800" />
           </div>
-          <div className="text-sm font-medium text-slate-500">
-            Total
-          </div>
+          <div className="text-sm font-medium text-slate-500">Total</div>
           <div className="mt-2 text-3xl font-bold text-slate-950">
             {data.summary.total}
           </div>
@@ -164,9 +288,7 @@ export default async function AlertsPage() {
           <div className="mb-4 w-fit rounded-2xl bg-red-50 p-3">
             <Siren className="h-6 w-6 text-red-700" />
           </div>
-          <div className="text-sm font-medium text-slate-500">
-            Desastre
-          </div>
+          <div className="text-sm font-medium text-slate-500">Desastre</div>
           <div className="mt-2 text-3xl font-bold text-red-700">
             {data.summary.critical}
           </div>
@@ -176,9 +298,7 @@ export default async function AlertsPage() {
           <div className="mb-4 w-fit rounded-2xl bg-orange-50 p-3">
             <AlertTriangle className="h-6 w-6 text-orange-700" />
           </div>
-          <div className="text-sm font-medium text-slate-500">
-            Alto
-          </div>
+          <div className="text-sm font-medium text-slate-500">Alto</div>
           <div className="mt-2 text-3xl font-bold text-orange-700">
             {data.summary.high}
           </div>
@@ -188,9 +308,7 @@ export default async function AlertsPage() {
           <div className="mb-4 w-fit rounded-2xl bg-amber-50 p-3">
             <AlertTriangle className="h-6 w-6 text-amber-700" />
           </div>
-          <div className="text-sm font-medium text-slate-500">
-            Abertos
-          </div>
+          <div className="text-sm font-medium text-slate-500">Abertos</div>
           <div className="mt-2 text-3xl font-bold text-amber-700">
             {data.summary.open}
           </div>
@@ -200,10 +318,18 @@ export default async function AlertsPage() {
           <div className="mb-4 w-fit rounded-2xl bg-emerald-50 p-3">
             <CheckCircle2 className="h-6 w-6 text-emerald-700" />
           </div>
-          <div className="text-sm font-medium text-slate-500">
-            Reconhecidos
-          </div>
+          <div className="text-sm font-medium text-slate-500">Resolvidos</div>
           <div className="mt-2 text-3xl font-bold text-emerald-700">
+            {data.summary.resolved}
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 w-fit rounded-2xl bg-blue-50 p-3">
+            <CheckCircle2 className="h-6 w-6 text-blue-700" />
+          </div>
+          <div className="text-sm font-medium text-slate-500">Reconhecidos</div>
+          <div className="mt-2 text-3xl font-bold text-blue-700">
             {data.summary.acknowledged}
           </div>
         </div>
@@ -227,15 +353,15 @@ export default async function AlertsPage() {
         <div className="overflow-hidden rounded-2xl border border-slate-200">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-slate-500">
-			<tr>
-			  <th className="px-4 py-3 font-semibold">Evento</th>
-			  <th className="px-4 py-3 font-semibold">Severidade</th>
-			  <th className="px-4 py-3 font-semibold">Ativo</th>
-			  <th className="px-4 py-3 font-semibold">Problema</th>
-			  <th className="px-4 py-3 font-semibold">Status</th>
-			  <th className="px-4 py-3 font-semibold">Horário</th>
-			  <th className="px-4 py-3 font-semibold">Sync</th>
-			</tr>
+              <tr>
+                <th className="px-4 py-3 font-semibold">Evento</th>
+                <th className="px-4 py-3 font-semibold">Severidade</th>
+                <th className="px-4 py-3 font-semibold">Ativo</th>
+                <th className="px-4 py-3 font-semibold">Problema</th>
+                <th className="px-4 py-3 font-semibold">Status</th>
+                <th className="px-4 py-3 font-semibold">Horário</th>
+                <th className="px-4 py-3 font-semibold">Sync</th>
+              </tr>
             </thead>
 
             <tbody className="divide-y divide-slate-100 bg-white">
@@ -255,8 +381,8 @@ export default async function AlertsPage() {
                       {getSeverityLabel(problem.severity)}
                     </span>
                   </td>
-				  
-				  <td className="px-4 py-3">
+
+                  <td className="px-4 py-3">
                     <div className="font-semibold text-slate-900">
                       {problem.asset?.name ??
                         problem.hostName ??
@@ -274,12 +400,19 @@ export default async function AlertsPage() {
                     {problem.name}
                   </td>
 
-                  <td className="px-4 py-3 text-slate-600">
-                    {problem.acknowledged === "1" ? "Reconhecido" : "Aberto"}
+                  <td
+                    className={[
+                      "px-4 py-3 font-semibold",
+                      getProblemStatusClass(problem),
+                    ].join(" ")}
+                  >
+                    {getProblemStatusLabel(problem)}
                   </td>
 
                   <td className="px-4 py-3 text-slate-600">
-                    {formatZabbixDate(problem.clock)}
+                    {problem.status === "RESOLVED" && problem.resolvedAt
+                      ? `Resolvido em ${formatDate(problem.resolvedAt)}`
+                      : formatZabbixDate(problem.clock)}
                   </td>
 
                   <td className="px-4 py-3 text-slate-500">
@@ -294,7 +427,7 @@ export default async function AlertsPage() {
                     colSpan={7}
                     className="px-4 py-10 text-center text-slate-500"
                   >
-                    Nenhum problema ativo sincronizado do Zabbix.
+                    Nenhum alerta encontrado no período selecionado.
                   </td>
                 </tr>
               )}
