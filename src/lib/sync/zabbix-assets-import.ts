@@ -10,26 +10,44 @@ function inferAssetTypeFromName(name: string, host: string): AssetType {
     value.includes("opnsense") ||
     value.includes("pfsense") ||
     value.includes("sophos") ||
+    value.includes("xg") ||
+    value.includes("xgs") ||
     value.includes("fortigate") ||
+    value.includes("fortinet") ||
     value.includes("check point") ||
     value.includes("checkpoint") ||
-    value.includes("spark")
+    value.includes("spark") ||
+    value.includes("palo alto") ||
+    value.includes("sonicwall")
   ) {
     return AssetType.FIREWALL;
   }
 
-  if (value.includes("switch") || value.includes("sw-") || value.includes("sw_")) {
+  if (
+    value.includes("switch") ||
+    value.includes("sw-") ||
+    value.includes("sw_") ||
+    value.includes("unifi switch") ||
+    value.includes("usw")
+  ) {
     return AssetType.SWITCH;
   }
 
-  if (value.includes("router") || value.includes("roteador")) {
+  if (
+    value.includes("router") ||
+    value.includes("roteador") ||
+    value.includes("edge router") ||
+    value.includes("edgerouter")
+  ) {
     return AssetType.ROUTER;
   }
 
   if (
     value.includes("ap-") ||
     value.includes("access point") ||
-    value.includes("wifi")
+    value.includes("wifi") ||
+    value.includes("unifi ap") ||
+    value.includes("uap")
   ) {
     return AssetType.ACCESS_POINT;
   }
@@ -37,7 +55,8 @@ function inferAssetTypeFromName(name: string, host: string): AssetType {
   if (
     value.includes("link") ||
     value.includes("wan") ||
-    value.includes("internet")
+    value.includes("internet") ||
+    value.includes("isp")
   ) {
     return AssetType.LINK;
   }

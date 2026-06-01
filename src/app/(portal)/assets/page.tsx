@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   LinkIcon,
   MonitorCheck,
+  Router,
   Server,
   Shield,
   Wifi,
@@ -13,8 +14,25 @@ import {
 
 function getAssetIcon(assetType: string) {
   if (assetType === "FIREWALL") return Shield;
-  if (assetType === "ACCESS_POINT" || assetType === "LINK") return Wifi;
+  if (assetType === "ACCESS_POINT") return Wifi;
+  if (assetType === "LINK" || assetType === "ROUTER") return Router;
   return Server;
+}
+
+function getAssetTypeLabel(assetType: string) {
+  const labels: Record<string, string> = {
+    SERVER: "Servidor",
+    WORKSTATION: "Estação",
+    FIREWALL: "Firewall",
+    SWITCH: "Switch",
+    ROUTER: "Roteador",
+    ACCESS_POINT: "Access Point",
+    LINK: "Link",
+    SERVICE: "Serviço",
+    OTHER: "Outro",
+  };
+
+  return labels[assetType] ?? assetType;
 }
 
 function getZabbixStatusLabel(status?: string | null) {
@@ -29,12 +47,57 @@ function getZabbixStatusLabel(status?: string | null) {
   return "Sem snapshot";
 }
 
+function getZabbixStatusBadgeClass(status?: string | null) {
+  if (status === "0") {
+    return "bg-emerald-50 text-emerald-700";
+  }
+
+  if (status === "1") {
+    return "bg-amber-50 text-amber-700";
+  }
+
+  return "bg-slate-100 text-slate-600";
+}
+
 function formatDate(date?: Date | null) {
   if (!date) {
     return "Nunca sincronizado";
   }
 
   return date.toLocaleString("pt-BR");
+}
+
+function getAssetOperationalStatus(asset: {
+  zabbixHostId: string | null;
+  zabbixSnapshot: {
+    status: string;
+  } | null;
+}) {
+  if (asset.zabbixSnapshot?.status === "0") {
+    return {
+      label: "Operacional",
+      className: "bg-emerald-50 text-emerald-700",
+    };
+  }
+
+  if (asset.zabbixSnapshot?.status === "1") {
+    return {
+      label: "Não monitorado",
+      className: "bg-amber-50 text-amber-700",
+    };
+  }
+
+  if (asset.zabbixHostId && !asset.zabbixSnapshot) {
+    return {
+      label: "Vínculo pendente",
+      className: "bg-amber-50 text-amber-700",
+    };
+  }
+
+  return {
+    label: "Sem vínculo",
+    className: "bg-slate-100 text-slate-600",
+  };
 }
 
 export default async function AssetsPage() {
@@ -67,6 +130,16 @@ export default async function AssetsPage() {
   }
 
   const activeAssets = data.assets.filter((asset) => asset.isActive);
+  const monitoredAssets = activeAssets.filter(
+    (asset) => asset.zabbixSnapshot?.status === "0"
+  );
+  const assetsWithSnapshot = activeAssets.filter((asset) => asset.zabbixSnapshot);
+  const assetsWithoutZabbixLink = activeAssets.filter(
+    (asset) => !asset.zabbixHostId
+  );
+  const assetsWithMissingSnapshot = activeAssets.filter(
+    (asset) => asset.zabbixHostId && !asset.zabbixSnapshot
+  );
 
   return (
     <div className="space-y-8">
@@ -77,8 +150,7 @@ export default async function AssetsPage() {
               Ativos
             </h2>
             <p className="mt-2 text-slate-600">
-              Inventário de servidores, firewalls, links, serviços e demais
-              ativos monitorados para{" "}
+              Inventário operacional sincronizado a partir do Zabbix para{" "}
               <span className="font-semibold text-slate-900">
                 {data.tenant.name}
               </span>
@@ -86,9 +158,9 @@ export default async function AssetsPage() {
             </p>
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-white px-6 py-4 shadow-sm">
+          <div className="rounded-3xl border border-slate-200 bg-white px-6 py-4 text-right shadow-sm">
             <div className="text-sm font-medium text-slate-500">
-              Total de ativos
+              Ativos visíveis
             </div>
             <div className="mt-1 text-3xl font-bold text-slate-950">
               {activeAssets.length}
@@ -97,13 +169,13 @@ export default async function AssetsPage() {
         </div>
       </section>
 
-      <section className="grid gap-5 md:grid-cols-4">
+      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-4 w-fit rounded-2xl bg-slate-100 p-3">
             <Server className="h-6 w-6 text-slate-800" />
           </div>
           <div className="text-sm font-medium text-slate-500">
-            Ativos ativos
+            Total de ativos
           </div>
           <div className="mt-2 text-3xl font-bold text-slate-950">
             {activeAssets.length}
@@ -112,10 +184,22 @@ export default async function AssetsPage() {
 
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-4 w-fit rounded-2xl bg-emerald-50 p-3">
-            <LinkIcon className="h-6 w-6 text-emerald-700" />
+            <MonitorCheck className="h-6 w-6 text-emerald-700" />
           </div>
           <div className="text-sm font-medium text-slate-500">
-            Vinculados ao Zabbix
+            Monitorados
+          </div>
+          <div className="mt-2 text-3xl font-bold text-emerald-700">
+            {monitoredAssets.length}
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 w-fit rounded-2xl bg-slate-100 p-3">
+            <LinkIcon className="h-6 w-6 text-slate-800" />
+          </div>
+          <div className="text-sm font-medium text-slate-500">
+            Vinculados
           </div>
           <div className="mt-2 text-3xl font-bold text-slate-950">
             {data.summary.linkedAssets}
@@ -124,13 +208,13 @@ export default async function AssetsPage() {
 
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-4 w-fit rounded-2xl bg-slate-100 p-3">
-            <MonitorCheck className="h-6 w-6 text-slate-800" />
+            <CheckCircle2 className="h-6 w-6 text-slate-800" />
           </div>
           <div className="text-sm font-medium text-slate-500">
             Com snapshot
           </div>
           <div className="mt-2 text-3xl font-bold text-slate-950">
-            {data.summary.assetsWithValidSnapshot}
+            {assetsWithSnapshot.length}
           </div>
         </div>
 
@@ -139,149 +223,141 @@ export default async function AssetsPage() {
             <AlertTriangle className="h-6 w-6 text-amber-700" />
           </div>
           <div className="text-sm font-medium text-slate-500">
-            Sem vínculo/snapshot
+            Pendências
           </div>
           <div className="mt-2 text-3xl font-bold text-amber-700">
-            {data.summary.assetsWithoutZabbixLink +
-              data.summary.assetsWithMissingSnapshot}
+            {assetsWithoutZabbixLink.length + assetsWithMissingSnapshot.length}
           </div>
         </div>
       </section>
 
-      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {activeAssets.map((asset) => {
-          const Icon = getAssetIcon(asset.assetType);
-          const snapshot = asset.zabbixSnapshot;
-          const hasZabbixLink = Boolean(asset.zabbixHostId);
-          const hasValidSnapshot = Boolean(snapshot);
-
-          return (
-            <div
-              key={asset.id}
-              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
-            >
-              <div className="mb-5 flex items-start justify-between gap-4">
-                <div className="rounded-2xl bg-slate-100 p-3">
-                  <Icon className="h-6 w-6 text-slate-800" />
-                </div>
-
-                <span
-                  className={
-                    hasValidSnapshot
-                      ? "rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
-                      : hasZabbixLink
-                        ? "rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700"
-                        : "rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600"
-                  }
-                >
-                  {hasValidSnapshot
-                    ? "Snapshot OK"
-                    : hasZabbixLink
-                      ? "Vínculo sem snapshot"
-                      : "Sem vínculo Zabbix"}
-                </span>
-              </div>
-
-              <h3 className="text-lg font-bold text-slate-900">{asset.name}</h3>
-
-              <div className="mt-4 space-y-2 text-sm text-slate-600">
-                <div>
-                  <span className="font-semibold text-slate-800">
-                    Hostname:
-                  </span>{" "}
-                  {asset.hostname ?? "Não informado"}
-                </div>
-                <div>
-                  <span className="font-semibold text-slate-800">IP:</span>{" "}
-                  {asset.ipAddress ?? "Não informado"}
-                </div>
-                <div>
-                  <span className="font-semibold text-slate-800">Tipo:</span>{" "}
-                  {asset.assetType}
-                </div>
-                <div>
-                  <span className="font-semibold text-slate-800">SO:</span>{" "}
-                  {asset.operatingSystem ?? "Não informado"}
-                </div>
-              </div>
-
-              <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-xs text-slate-500">
-                <div>
-                  Zabbix Host ID:{" "}
-                  <span className="font-mono">
-                    {asset.zabbixHostId ?? "não vinculado"}
-                  </span>
-                </div>
-                <div className="mt-1">
-                  Wazuh Agent ID:{" "}
-                  <span className="font-mono">
-                    {asset.wazuhAgentId ?? "não vinculado"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-4 rounded-2xl border border-slate-100 bg-white p-4">
-                <div className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-900">
-                  {hasValidSnapshot ? (
-                    <CheckCircle2 className="h-4 w-4 text-emerald-700" />
-                  ) : (
-                    <AlertTriangle className="h-4 w-4 text-amber-700" />
-                  )}
-                  Dados Zabbix
-                </div>
-
-                <div className="space-y-2 text-xs text-slate-600">
-                  <div>
-                    <span className="font-semibold text-slate-800">
-                      Status:
-                    </span>{" "}
-                    {getZabbixStatusLabel(snapshot?.status)}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-slate-800">
-                      Nome Zabbix:
-                    </span>{" "}
-                    {snapshot?.name ?? "Sem snapshot"}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-slate-800">
-                      Interface:
-                    </span>{" "}
-                    {snapshot?.interfaceIp ||
-                      snapshot?.interfaceDns ||
-                      "Sem snapshot"}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-slate-800">
-                      Última sync:
-                    </span>{" "}
-                    {formatDate(snapshot?.syncedAt)}
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-
-        {activeAssets.length === 0 && (
-          <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-slate-500 shadow-sm md:col-span-2 xl:col-span-3">
-            Nenhum ativo cadastrado para este tenant.
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-5 flex items-center gap-3">
+          <div className="rounded-2xl bg-slate-100 p-3">
+            <MonitorCheck className="h-6 w-6 text-slate-800" />
           </div>
-        )}
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">
+              Inventário operacional
+            </h3>
+            <p className="text-sm text-slate-500">
+              Ativos importados e atualizados automaticamente a partir dos hosts
+              monitorados no Zabbix.
+            </p>
+          </div>
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-slate-200">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 text-slate-500">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Ativo</th>
+                <th className="px-4 py-3 font-semibold">Tipo</th>
+                <th className="px-4 py-3 font-semibold">Status operacional</th>
+                <th className="px-4 py-3 font-semibold">Interface</th>
+                <th className="px-4 py-3 font-semibold">Zabbix</th>
+                <th className="px-4 py-3 font-semibold">Última sync</th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {activeAssets.map((asset) => {
+                const Icon = getAssetIcon(asset.assetType);
+                const snapshot = asset.zabbixSnapshot;
+                const operationalStatus = getAssetOperationalStatus(asset);
+
+                return (
+                  <tr key={asset.id}>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-2xl bg-slate-100 p-2">
+                          <Icon className="h-5 w-5 text-slate-800" />
+                        </div>
+                        <div>
+                          <div className="font-bold text-slate-900">
+                            {asset.name}
+                          </div>
+                          <div className="mt-1 font-mono text-xs text-slate-500">
+                            {asset.hostname ?? "hostname não informado"}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="px-4 py-4 text-slate-700">
+                      {getAssetTypeLabel(asset.assetType)}
+                    </td>
+
+                    <td className="px-4 py-4">
+                      <span
+                        className={[
+                          "rounded-full px-3 py-1 text-xs font-bold",
+                          operationalStatus.className,
+                        ].join(" ")}
+                      >
+                        {operationalStatus.label}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-4">
+                      <div className="font-mono text-xs text-slate-700">
+                        {snapshot?.interfaceIp ||
+                          snapshot?.interfaceDns ||
+                          asset.ipAddress ||
+                          "-"}
+                      </div>
+                    </td>
+
+                    <td className="px-4 py-4">
+                      <div className="space-y-1">
+                        <span
+                          className={[
+                            "inline-flex rounded-full px-3 py-1 text-xs font-bold",
+                            getZabbixStatusBadgeClass(snapshot?.status),
+                          ].join(" ")}
+                        >
+                          {getZabbixStatusLabel(snapshot?.status)}
+                        </span>
+                        <div className="font-mono text-xs text-slate-500">
+                          {asset.zabbixHostId ?? "sem vínculo"}
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="px-4 py-4 text-xs text-slate-500">
+                      {formatDate(snapshot?.syncedAt)}
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {activeAssets.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="px-4 py-10 text-center text-slate-500"
+                  >
+                    Nenhum ativo cadastrado para este tenant.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-5 flex items-center gap-3">
-          <MonitorCheck className="h-6 w-6 text-slate-700" />
+          <LinkIcon className="h-6 w-6 text-slate-700" />
           <div>
             <h3 className="text-lg font-bold text-slate-900">
-              Como interpretar os vínculos
+              Origem e sincronização
             </h3>
             <p className="text-sm text-slate-500">
-              O ativo cadastrado no portal é cruzado com o snapshot do Zabbix
-              usando o campo Zabbix Host ID. Se o ID estiver vazio ou não for
-              encontrado na última sincronização, o portal sinaliza o vínculo
-              como pendente.
+              O Zabbix permanece como fonte técnica dos hosts monitorados. O
+              portal importa novos hosts como ativos e atualiza dados técnicos,
+              como nome, hostname e IP, sem depender da API em tempo real na
+              navegação do cliente.
             </p>
           </div>
         </div>
