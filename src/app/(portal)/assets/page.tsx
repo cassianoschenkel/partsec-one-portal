@@ -1,9 +1,11 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/../auth";
 import { getTenantAssetsWithZabbixSnapshots } from "@/lib/queries/assets";
 import {
   AlertTriangle,
   CheckCircle2,
+  Filter,
   LinkIcon,
   MonitorCheck,
   Router,
@@ -11,6 +13,13 @@ import {
   Shield,
   Wifi,
 } from "lucide-react";
+
+type AssetsPageProps = {
+  searchParams?: Promise<{
+    status?: "all" | "monitored" | "linked" | "pending" | "unlinked";
+    type?: string;
+  }>;
+};
 
 function getAssetIcon(assetType: string) {
   if (assetType === "FIREWALL") return Shield;
@@ -100,7 +109,29 @@ function getAssetOperationalStatus(asset: {
   };
 }
 
-export default async function AssetsPage() {
+function buildAssetsHref({
+  status,
+  type,
+}: {
+  status?: string;
+  type?: string;
+}) {
+  const params = new URLSearchParams();
+
+  if (status && status !== "all") {
+    params.set("status", status);
+  }
+
+  if (type) {
+    params.set("type", type);
+  }
+
+  const query = params.toString();
+
+  return query ? `/assets?${query}` : "/assets";
+}
+
+export default async function AssetsPage({ searchParams }: AssetsPageProps) {
   const session = await auth();
 
   if (!session?.user) {
@@ -119,7 +150,14 @@ export default async function AssetsPage() {
     );
   }
 
-  const data = await getTenantAssetsWithZabbixSnapshots(session.user.tenantId);
+  const params = searchParams ? await searchParams : {};
+  const statusFilter = params.status ?? "all";
+  const typeFilter = params.type;
+
+  const data = await getTenantAssetsWithZabbixSnapshots(session.user.tenantId, {
+    status: statusFilter,
+    type: typeFilter,
+  });
 
   if (!data) {
     return (
@@ -128,18 +166,6 @@ export default async function AssetsPage() {
       </div>
     );
   }
-
-  const activeAssets = data.assets.filter((asset) => asset.isActive);
-  const monitoredAssets = activeAssets.filter(
-    (asset) => asset.zabbixSnapshot?.status === "0"
-  );
-  const assetsWithSnapshot = activeAssets.filter((asset) => asset.zabbixSnapshot);
-  const assetsWithoutZabbixLink = activeAssets.filter(
-    (asset) => !asset.zabbixHostId
-  );
-  const assetsWithMissingSnapshot = activeAssets.filter(
-    (asset) => asset.zabbixHostId && !asset.zabbixSnapshot
-  );
 
   return (
     <div className="space-y-8">
@@ -160,17 +186,20 @@ export default async function AssetsPage() {
 
           <div className="rounded-3xl border border-slate-200 bg-white px-6 py-4 text-right shadow-sm">
             <div className="text-sm font-medium text-slate-500">
-              Ativos visíveis
+              Resultado filtrado
             </div>
             <div className="mt-1 text-3xl font-bold text-slate-950">
-              {activeAssets.length}
+              {data.summary.filteredAssets}
             </div>
           </div>
         </div>
       </section>
 
       <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <Link
+          href={buildAssetsHref({})}
+          className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
           <div className="mb-4 w-fit rounded-2xl bg-slate-100 p-3">
             <Server className="h-6 w-6 text-slate-800" />
           </div>
@@ -178,57 +207,160 @@ export default async function AssetsPage() {
             Total de ativos
           </div>
           <div className="mt-2 text-3xl font-bold text-slate-950">
-            {activeAssets.length}
+            {data.summary.totalAssets}
           </div>
-        </div>
+        </Link>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <Link
+          href={buildAssetsHref({ status: "monitored" })}
+          className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
           <div className="mb-4 w-fit rounded-2xl bg-emerald-50 p-3">
             <MonitorCheck className="h-6 w-6 text-emerald-700" />
           </div>
-          <div className="text-sm font-medium text-slate-500">
-            Monitorados
-          </div>
+          <div className="text-sm font-medium text-slate-500">Monitorados</div>
           <div className="mt-2 text-3xl font-bold text-emerald-700">
-            {monitoredAssets.length}
+            {data.summary.monitoredAssets}
           </div>
-        </div>
+        </Link>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <Link
+          href={buildAssetsHref({ status: "linked" })}
+          className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
           <div className="mb-4 w-fit rounded-2xl bg-slate-100 p-3">
             <LinkIcon className="h-6 w-6 text-slate-800" />
           </div>
-          <div className="text-sm font-medium text-slate-500">
-            Vinculados
-          </div>
+          <div className="text-sm font-medium text-slate-500">Vinculados</div>
           <div className="mt-2 text-3xl font-bold text-slate-950">
             {data.summary.linkedAssets}
           </div>
-        </div>
+        </Link>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-4 w-fit rounded-2xl bg-slate-100 p-3">
-            <CheckCircle2 className="h-6 w-6 text-slate-800" />
-          </div>
-          <div className="text-sm font-medium text-slate-500">
-            Com snapshot
-          </div>
-          <div className="mt-2 text-3xl font-bold text-slate-950">
-            {assetsWithSnapshot.length}
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <Link
+          href={buildAssetsHref({ status: "pending" })}
+          className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
           <div className="mb-4 w-fit rounded-2xl bg-amber-50 p-3">
             <AlertTriangle className="h-6 w-6 text-amber-700" />
           </div>
-          <div className="text-sm font-medium text-slate-500">
-            Pendências
-          </div>
+          <div className="text-sm font-medium text-slate-500">Pendências</div>
           <div className="mt-2 text-3xl font-bold text-amber-700">
-            {assetsWithoutZabbixLink.length + assetsWithMissingSnapshot.length}
+            {data.summary.pendingAssets}
+          </div>
+        </Link>
+
+        <Link
+          href={buildAssetsHref({ status: "unlinked" })}
+          className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
+          <div className="mb-4 w-fit rounded-2xl bg-slate-100 p-3">
+            <AlertTriangle className="h-6 w-6 text-slate-700" />
+          </div>
+          <div className="text-sm font-medium text-slate-500">Sem vínculo</div>
+          <div className="mt-2 text-3xl font-bold text-slate-700">
+            {data.summary.assetsWithoutZabbixLink}
+          </div>
+        </Link>
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="rounded-2xl bg-slate-100 p-3">
+            <Filter className="h-5 w-5 text-slate-700" />
+          </div>
+          <div>
+            <h3 className="font-bold text-slate-900">Filtros</h3>
+            <p className="text-sm text-slate-500">
+              Filtre o inventário por tipo ou situação operacional.
+            </p>
           </div>
         </div>
+
+        <form className="grid gap-4 md:grid-cols-[1fr_1fr_auto]" method="GET">
+          <div>
+            <label
+              htmlFor="status"
+              className="mb-2 block text-sm font-semibold text-slate-700"
+            >
+              Status
+            </label>
+            <select
+              id="status"
+              name="status"
+              defaultValue={statusFilter}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900"
+            >
+              <option value="all">Todos</option>
+              <option value="monitored">Monitorados</option>
+              <option value="linked">Vinculados ao Zabbix</option>
+              <option value="pending">Pendências</option>
+              <option value="unlinked">Sem vínculo</option>
+            </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor="type"
+              className="mb-2 block text-sm font-semibold text-slate-700"
+            >
+              Tipo
+            </label>
+            <select
+              id="type"
+              name="type"
+              defaultValue={typeFilter ?? ""}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900"
+            >
+              <option value="">Todos</option>
+              <option value="FIREWALL">Firewall</option>
+              <option value="SERVER">Servidor</option>
+              <option value="SWITCH">Switch</option>
+              <option value="ROUTER">Roteador</option>
+              <option value="ACCESS_POINT">Access Point</option>
+              <option value="LINK">Link</option>
+              <option value="SERVICE">Serviço</option>
+              <option value="WORKSTATION">Estação</option>
+              <option value="OTHER">Outro</option>
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            <button
+              type="submit"
+              className="w-full rounded-2xl bg-[#071426] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#0f2544]"
+            >
+              Aplicar filtro
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        {Object.entries(data.summary.assetsByType).map(([type, count]) => {
+          const Icon = getAssetIcon(type);
+
+          return (
+            <Link
+              key={type}
+              href={buildAssetsHref({
+                status: statusFilter,
+                type,
+              })}
+              className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <div className="mb-3 w-fit rounded-2xl bg-slate-100 p-3">
+                <Icon className="h-5 w-5 text-slate-800" />
+              </div>
+              <div className="text-sm font-medium text-slate-500">
+                {getAssetTypeLabel(type)}
+              </div>
+              <div className="mt-1 text-2xl font-bold text-slate-950">
+                {count}
+              </div>
+            </Link>
+          );
+        })}
       </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -261,7 +393,7 @@ export default async function AssetsPage() {
             </thead>
 
             <tbody className="divide-y divide-slate-100 bg-white">
-              {activeAssets.map((asset) => {
+              {data.assets.map((asset) => {
                 const Icon = getAssetIcon(asset.assetType);
                 const snapshot = asset.zabbixSnapshot;
                 const operationalStatus = getAssetOperationalStatus(asset);
@@ -331,13 +463,13 @@ export default async function AssetsPage() {
                 );
               })}
 
-              {activeAssets.length === 0 && (
+              {data.assets.length === 0 && (
                 <tr>
                   <td
                     colSpan={6}
                     className="px-4 py-10 text-center text-slate-500"
                   >
-                    Nenhum ativo cadastrado para este tenant.
+                    Nenhum ativo encontrado para os filtros selecionados.
                   </td>
                 </tr>
               )}

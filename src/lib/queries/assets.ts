@@ -1,6 +1,14 @@
 import { prisma } from "@/lib/prisma";
 
-export async function getTenantAssetsWithZabbixSnapshots(tenantId: string) {
+export type AssetsFilters = {
+  status?: "all" | "monitored" | "linked" | "pending" | "unlinked";
+  type?: string;
+};
+
+export async function getTenantAssetsWithZabbixSnapshots(
+  tenantId: string,
+  filters: AssetsFilters = {}
+) {
   const [tenant, zabbixSnapshots] = await Promise.all([
     prisma.tenant.findUnique({
       where: {
@@ -14,6 +22,7 @@ export async function getTenantAssetsWithZabbixSnapshots(tenantId: string) {
         },
       },
     }),
+
     prisma.zabbixHostSnapshot.findMany({
       where: {
         tenantId,
@@ -32,7 +41,7 @@ export async function getTenantAssetsWithZabbixSnapshots(tenantId: string) {
     zabbixSnapshots.map((snapshot) => [snapshot.zabbixHostId, snapshot])
   );
 
-  const assets = tenant.assets.map((asset) => {
+  const assetsWithSnapshots = tenant.assets.map((asset) => {
     const zabbixSnapshot = asset.zabbixHostId
       ? snapshotsByZabbixHostId.get(asset.zabbixHostId) ?? null
       : null;
@@ -43,22 +52,70 @@ export async function getTenantAssetsWithZabbixSnapshots(tenantId: string) {
     };
   });
 
-  const linkedAssets = assets.filter((asset) => asset.zabbixHostId);
-  const assetsWithValidSnapshot = assets.filter((asset) => asset.zabbixSnapshot);
-  const assetsWithoutZabbixLink = assets.filter((asset) => !asset.zabbixHostId);
-  const assetsWithMissingSnapshot = assets.filter(
+  const activeAssets = assetsWithSnapshots.filter((asset) => asset.isActive);
+
+  const filteredAssets = activeAssets.filter((asset) => {
+    if (filters.type && asset.assetType !== filters.type) {
+      return false;
+    }
+
+    if (filters.status === "monitored") {
+      return asset.zabbixSnapshot?.status === "0";
+    }
+
+    if (filters.status === "linked") {
+      return Boolean(asset.zabbixHostId);
+    }
+
+    if (filters.status === "pending") {
+      return Boolean(asset.zabbixHostId && !asset.zabbixSnapshot);
+    }
+
+    if (filters.status === "unlinked") {
+      return !asset.zabbixHostId;
+    }
+
+    return true;
+  });
+
+  const linkedAssets = activeAssets.filter((asset) => asset.zabbixHostId);
+  const monitoredAssets = activeAssets.filter(
+    (asset) => asset.zabbixSnapshot?.status === "0"
+  );
+  const assetsWithValidSnapshot = activeAssets.filter(
+    (asset) => asset.zabbixSnapshot
+  );
+  const assetsWithoutZabbixLink = activeAssets.filter(
+    (asset) => !asset.zabbixHostId
+  );
+  const assetsWithMissingSnapshot = activeAssets.filter(
     (asset) => asset.zabbixHostId && !asset.zabbixSnapshot
+  );
+
+  const assetsByType = activeAssets.reduce<Record<string, number>>(
+    (acc, asset) => {
+      acc[asset.assetType] = (acc[asset.assetType] ?? 0) + 1;
+      return acc;
+    },
+    {}
   );
 
   return {
     tenant,
-    assets,
+    assets: filteredAssets,
+    allAssets: activeAssets,
+    filters,
     summary: {
-      totalAssets: assets.length,
+      totalAssets: activeAssets.length,
+      filteredAssets: filteredAssets.length,
       linkedAssets: linkedAssets.length,
+      monitoredAssets: monitoredAssets.length,
       assetsWithValidSnapshot: assetsWithValidSnapshot.length,
       assetsWithoutZabbixLink: assetsWithoutZabbixLink.length,
       assetsWithMissingSnapshot: assetsWithMissingSnapshot.length,
+      pendingAssets:
+        assetsWithoutZabbixLink.length + assetsWithMissingSnapshot.length,
+      assetsByType,
     },
   };
 }
