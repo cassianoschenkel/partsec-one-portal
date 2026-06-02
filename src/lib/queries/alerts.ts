@@ -5,6 +5,12 @@ export type AlertsDateRange = {
   endDate: Date;
 };
 
+export type AlertsFilters = {
+  status?: "open" | "resolved" | "acknowledged" | "all";
+  severity?: string;
+  assetId?: string;
+};
+
 export function getDefaultAlertsDateRange(): AlertsDateRange {
   const endDate = new Date();
   const startDate = new Date(endDate.getTime() - 24 * 60 * 60 * 1000);
@@ -21,7 +27,8 @@ function toZabbixClock(date: Date) {
 
 export async function getTenantZabbixAlertsOverview(
   tenantId: string,
-  range: AlertsDateRange
+  range: AlertsDateRange,
+  filters: AlertsFilters = {}
 ) {
   const startClock = toZabbixClock(range.startDate);
   const endClock = toZabbixClock(range.endDate);
@@ -54,7 +61,7 @@ export async function getTenantZabbixAlertsOverview(
       orderBy: {
         clock: "desc",
       },
-      take: 250,
+      take: 500,
     }),
 
     prisma.customerAsset.findMany({
@@ -99,6 +106,33 @@ export async function getTenantZabbixAlertsOverview(
     };
   });
 
+  const filteredProblems = enrichedProblems.filter((problem) => {
+    if (filters.status === "open" && problem.status === "RESOLVED") {
+      return false;
+    }
+
+    if (filters.status === "resolved" && problem.status !== "RESOLVED") {
+      return false;
+    }
+
+    if (
+      filters.status === "acknowledged" &&
+      (problem.status === "RESOLVED" || problem.acknowledged !== "1")
+    ) {
+      return false;
+    }
+
+    if (filters.severity && problem.severity !== filters.severity) {
+      return false;
+    }
+
+    if (filters.assetId && problem.asset?.id !== filters.assetId) {
+      return false;
+    }
+
+    return true;
+  });
+
   const openProblems = enrichedProblems.filter(
     (problem) => problem.status !== "RESOLVED"
   );
@@ -121,11 +155,14 @@ export async function getTenantZabbixAlertsOverview(
 
   return {
     tenant,
-    problems: enrichedProblems,
+    assets,
+    problems: filteredProblems,
     lastSync,
     range,
+    filters,
     summary: {
       total: enrichedProblems.length,
+      filtered: filteredProblems.length,
       open: openProblems.length,
       resolved: resolvedProblems.length,
       critical: criticalProblems.length,
