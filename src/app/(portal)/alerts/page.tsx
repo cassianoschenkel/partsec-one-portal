@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/../auth";
 import {
@@ -17,6 +18,9 @@ type AlertsPageProps = {
   searchParams?: Promise<{
     start?: string;
     end?: string;
+    status?: "open" | "resolved" | "acknowledged" | "all";
+    severity?: string;
+    assetId?: string;
   }>;
 };
 
@@ -120,6 +124,39 @@ function getProblemStatusClass(problem: {
   return "text-slate-600";
 }
 
+function buildAlertsHref({
+  startDate,
+  endDate,
+  status,
+  severity,
+  assetId,
+}: {
+  startDate: Date;
+  endDate: Date;
+  status?: string;
+  severity?: string;
+  assetId?: string;
+}) {
+  const params = new URLSearchParams();
+
+  params.set("start", toDateTimeLocalValue(startDate));
+  params.set("end", toDateTimeLocalValue(endDate));
+
+  if (status && status !== "all") {
+    params.set("status", status);
+  }
+
+  if (severity) {
+    params.set("severity", severity);
+  }
+
+  if (assetId) {
+    params.set("assetId", assetId);
+  }
+
+  return `/alerts?${params.toString()}`;
+}
+
 export default async function AlertsPage({ searchParams }: AlertsPageProps) {
   const session = await auth();
 
@@ -144,11 +181,22 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
 
   const startDate = parseDateInput(params.start) ?? defaultRange.startDate;
   const endDate = parseDateInput(params.end) ?? defaultRange.endDate;
+  const statusFilter = params.status ?? "all";
+  const severityFilter = params.severity;
+  const assetIdFilter = params.assetId;
 
-  const data = await getTenantZabbixAlertsOverview(session.user.tenantId, {
-    startDate,
-    endDate,
-  });
+  const data = await getTenantZabbixAlertsOverview(
+    session.user.tenantId,
+    {
+      startDate,
+      endDate,
+    },
+    {
+      status: statusFilter,
+      severity: severityFilter,
+      assetId: assetIdFilter,
+    }
+  );
 
   if (!data) {
     return (
@@ -229,7 +277,10 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
           </div>
         </div>
 
-        <form className="grid gap-4 md:grid-cols-[1fr_1fr_auto]" method="GET">
+        <form
+          className="grid gap-4 xl:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto]"
+          method="GET"
+        >
           <div>
             <label
               htmlFor="start"
@@ -262,6 +313,71 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
             />
           </div>
 
+          <div>
+            <label
+              htmlFor="status"
+              className="mb-2 block text-sm font-semibold text-slate-700"
+            >
+              Status
+            </label>
+            <select
+              id="status"
+              name="status"
+              defaultValue={statusFilter}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900"
+            >
+              <option value="all">Todos</option>
+              <option value="open">Abertos</option>
+              <option value="resolved">Resolvidos</option>
+              <option value="acknowledged">Reconhecidos</option>
+            </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor="severity"
+              className="mb-2 block text-sm font-semibold text-slate-700"
+            >
+              Severidade
+            </label>
+            <select
+              id="severity"
+              name="severity"
+              defaultValue={severityFilter ?? ""}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900"
+            >
+              <option value="">Todas</option>
+              <option value="5">Desastre</option>
+              <option value="4">Alto</option>
+              <option value="3">Médio</option>
+              <option value="2">Atenção</option>
+              <option value="1">Informação</option>
+              <option value="0">Não classificado</option>
+            </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor="assetId"
+              className="mb-2 block text-sm font-semibold text-slate-700"
+            >
+              Ativo
+            </label>
+            <select
+              id="assetId"
+              name="assetId"
+              defaultValue={assetIdFilter ?? ""}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900"
+            >
+              <option value="">Todos</option>
+              {data.assets.map((asset) => (
+                <option key={asset.id} value={asset.id}>
+                  {asset.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="flex items-end">
             <button
               type="submit"
@@ -274,7 +390,13 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
       </section>
 
       <section className="grid gap-5 md:grid-cols-3 xl:grid-cols-6">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <Link
+          href={buildAlertsHref({
+            startDate,
+            endDate,
+          })}
+          className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
           <div className="mb-4 w-fit rounded-2xl bg-slate-100 p-3">
             <ShieldAlert className="h-6 w-6 text-slate-800" />
           </div>
@@ -282,9 +404,17 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
           <div className="mt-2 text-3xl font-bold text-slate-950">
             {data.summary.total}
           </div>
-        </div>
+        </Link>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <Link
+          href={buildAlertsHref({
+            startDate,
+            endDate,
+            status: "open",
+            severity: "5",
+          })}
+          className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
           <div className="mb-4 w-fit rounded-2xl bg-red-50 p-3">
             <Siren className="h-6 w-6 text-red-700" />
           </div>
@@ -292,9 +422,17 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
           <div className="mt-2 text-3xl font-bold text-red-700">
             {data.summary.critical}
           </div>
-        </div>
+        </Link>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <Link
+          href={buildAlertsHref({
+            startDate,
+            endDate,
+            status: "open",
+            severity: "4",
+          })}
+          className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
           <div className="mb-4 w-fit rounded-2xl bg-orange-50 p-3">
             <AlertTriangle className="h-6 w-6 text-orange-700" />
           </div>
@@ -302,9 +440,16 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
           <div className="mt-2 text-3xl font-bold text-orange-700">
             {data.summary.high}
           </div>
-        </div>
+        </Link>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <Link
+          href={buildAlertsHref({
+            startDate,
+            endDate,
+            status: "open",
+          })}
+          className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
           <div className="mb-4 w-fit rounded-2xl bg-amber-50 p-3">
             <AlertTriangle className="h-6 w-6 text-amber-700" />
           </div>
@@ -312,9 +457,16 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
           <div className="mt-2 text-3xl font-bold text-amber-700">
             {data.summary.open}
           </div>
-        </div>
+        </Link>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <Link
+          href={buildAlertsHref({
+            startDate,
+            endDate,
+            status: "resolved",
+          })}
+          className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
           <div className="mb-4 w-fit rounded-2xl bg-emerald-50 p-3">
             <CheckCircle2 className="h-6 w-6 text-emerald-700" />
           </div>
@@ -322,17 +474,26 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
           <div className="mt-2 text-3xl font-bold text-emerald-700">
             {data.summary.resolved}
           </div>
-        </div>
+        </Link>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <Link
+          href={buildAlertsHref({
+            startDate,
+            endDate,
+            status: "acknowledged",
+          })}
+          className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
           <div className="mb-4 w-fit rounded-2xl bg-blue-50 p-3">
             <CheckCircle2 className="h-6 w-6 text-blue-700" />
           </div>
-          <div className="text-sm font-medium text-slate-500">Reconhecidos</div>
+          <div className="text-sm font-medium text-slate-500">
+            Reconhecidos
+          </div>
           <div className="mt-2 text-3xl font-bold text-blue-700">
             {data.summary.acknowledged}
           </div>
-        </div>
+        </Link>
       </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
