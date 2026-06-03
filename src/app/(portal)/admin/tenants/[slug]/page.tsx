@@ -322,12 +322,12 @@ type AdminTenantDetailPageProps = {
               {tenant.assets.map((asset) => (
                 <tr key={asset.id}>
                   <td className="px-4 py-3 font-medium text-slate-900">
-                    {asset.name}
+                    
 		    <Link
 		      href={`/admin/tenants/${tenant.slug}/assets/${asset.id}/edit`}
 		      className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100"
 		    >
-		      Editar ativo
+		      {asset.name}
 		    </Link>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-600">
