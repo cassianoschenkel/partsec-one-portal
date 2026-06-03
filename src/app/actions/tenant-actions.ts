@@ -340,3 +340,79 @@ export async function testZabbixIntegrationAction(tenantSlug: string) {
 
   redirect(`/admin/tenants/${tenantSlug}/integrations`);
 }
+
+export async function updateTenantAssetAction(
+  tenantSlug: string,
+  assetId: string,
+  formData: FormData
+) {
+  const name = String(formData.get("name") ?? "").trim();
+  const hostname = String(formData.get("hostname") ?? "").trim();
+  const ipAddress = String(formData.get("ipAddress") ?? "").trim();
+  const assetTypeInput = String(formData.get("assetType") ?? "").trim();
+  const operatingSystem = String(formData.get("operatingSystem") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const zabbixHostId = String(formData.get("zabbixHostId") ?? "").trim();
+  const wazuhAgentId = String(formData.get("wazuhAgentId") ?? "").trim();
+  const isActive = formData.get("isActive") === "on";
+
+  if (!name) {
+    throw new Error("Nome do ativo é obrigatório.");
+  }
+
+  const allowedAssetTypes: string[] = [
+    AssetType.SERVER,
+    AssetType.WORKSTATION,
+    AssetType.FIREWALL,
+    AssetType.SWITCH,
+    AssetType.ROUTER,
+    AssetType.ACCESS_POINT,
+    AssetType.LINK,
+    AssetType.SERVICE,
+    AssetType.OTHER,
+  ];
+
+  if (!allowedAssetTypes.includes(assetTypeInput)) {
+    throw new Error("Tipo de ativo inválido.");
+  }
+
+  const tenant = await prisma.tenant.findUnique({
+    where: {
+      slug: tenantSlug,
+    },
+  });
+
+  if (!tenant) {
+    throw new Error("Tenant não encontrado.");
+  }
+
+  const asset = await prisma.customerAsset.findFirst({
+    where: {
+      id: assetId,
+      tenantId: tenant.id,
+    },
+  });
+
+  if (!asset) {
+    throw new Error("Ativo não encontrado.");
+  }
+
+  await prisma.customerAsset.update({
+    where: {
+      id: asset.id,
+    },
+    data: {
+      name,
+      hostname: hostname || null,
+      ipAddress: ipAddress || null,
+      assetType: assetTypeInput as AssetType,
+      operatingSystem: operatingSystem || null,
+      description: description || null,
+      zabbixHostId: zabbixHostId || null,
+      wazuhAgentId: wazuhAgentId || null,
+      isActive,
+    },
+  });
+
+  redirect(`/admin/tenants/${tenant.slug}`);
+}
