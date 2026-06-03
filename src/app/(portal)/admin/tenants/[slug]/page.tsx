@@ -323,12 +323,12 @@ type AdminTenantDetailPageProps = {
                 <tr key={asset.id}>
                   <td className="px-4 py-3 font-medium text-slate-900">
                     
-		    <Link
-		      href={`/admin/tenants/${tenant.slug}/assets/${asset.id}/edit`}
-		      className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100"
-		    >
-		      {asset.name}
-		    </Link>
+			<Link
+			  href={`/admin/tenants/${tenant.slug}/assets/${asset.id}/edit`}
+			  className="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-900 transition hover:border-slate-400 hover:bg-slate-50 hover:text-[#071426]"
+			>
+			  {asset.name}
+			</Link>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-600">
                     {asset.hostname ?? "-"}
