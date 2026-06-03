@@ -327,53 +327,28 @@ type AdminTenantDetailPageProps = {
 		      href={`/admin/tenants/${tenant.slug}/assets/${asset.id}/edit`}
 		      className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100"
 		    >
-		      Editar
+		      Editar ativo
 		    </Link>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-600">
                     {asset.hostname ?? "-"}
-                    <Link
-                      href={`/admin/tenants/${tenant.slug}/assets/${asset.id}/edit`}
-                      className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100"
-                    >
-                      Editar
-                    </Link>
+
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-600">
                     {asset.ipAddress ?? "-"}
-                    <Link
-                      href={`/admin/tenants/${tenant.slug}/assets/${asset.id}/edit`}
-                      className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100"
-                    >
-                      Editar
-                    </Link>
+
                   </td>
                   <td className="px-4 py-3 text-slate-600">
                     {asset.assetType}
-                    <Link
-                      href={`/admin/tenants/${tenant.slug}/assets/${asset.id}/edit`}
-                      className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100"
-                    >
-                      Editar
-                    </Link>
+
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-500">
                     {asset.zabbixHostId ?? "não vinculado"}
-                    <Link
-                      href={`/admin/tenants/${tenant.slug}/assets/${asset.id}/edit`}
-                      className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100"
-                    >
-                      Editar
-                    </Link>
+
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-500">
                     {asset.wazuhAgentId ?? "não vinculado"}
-                    <Link
-                      href={`/admin/tenants/${tenant.slug}/assets/${asset.id}/edit`}
-                      className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100"
-                    >
-                      Editar
-                    </Link>
+
                   </td>
                 </tr>
               ))}
