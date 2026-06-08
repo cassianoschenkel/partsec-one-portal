@@ -388,6 +388,13 @@ type AdminTenantDetailPageProps = {
   >
 	    Ver Zabbix
 	    </Link>
+	    
+            <Link
+	      href={`/admin/tenants/${tenant.slug}/siem`}
+	      className="rounded-full border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+	    >
+	    Ver Agentes SIEM
+	    </Link>
 		
 		<Link
 		  href={`/admin/tenants/${tenant.slug}/sync`}
