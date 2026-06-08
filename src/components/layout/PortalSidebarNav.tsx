@@ -31,15 +31,15 @@ const menuItems = [
     icon: Bell,
   },
   {
-    label: "Suporte",
-    href: "/tickets",
-    icon: Ticket,
-  },
-  {
   label: "Vulnerabilidades",
   href: "/vulnerabilities",
   icon: Bug,
   roles: ["TENANT_ADMIN", "TENANT_USER", "READ_ONLY"],
+  },
+  {
+    label: "Suporte",
+    href: "/tickets",
+    icon: Ticket,
   },
   {
     label: "Relatórios",
