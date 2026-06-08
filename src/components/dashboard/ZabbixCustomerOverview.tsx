@@ -66,7 +66,7 @@ export function ZabbixCustomerOverview({
               Monitoramento temporariamente indisponível
             </h3>
             <p className="mt-1 text-sm leading-6">
-              Não foi possível consultar os dados do Zabbix neste momento.
+              Não foi possível consultar os dados do monitoramento neste momento.
             </p>
             <p className="mt-2 text-xs leading-5 text-amber-800">
               Detalhe técnico: {zabbix.errorMessage}
@@ -83,7 +83,7 @@ export function ZabbixCustomerOverview({
     <section className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-          Monitoramento Zabbix
+          Monitoramento Operacional
         </h2>
         <p className="mt-2 text-slate-600">
           Visão operacional de disponibilidade e problemas recentes.
@@ -96,7 +96,7 @@ export function ZabbixCustomerOverview({
             <Server className="h-6 w-6 text-slate-800" />
           </div>
           <div className="text-sm font-medium text-slate-500">
-            Versão Zabbix
+            Versão da integração
           </div>
           <div className="mt-2 text-2xl font-bold text-slate-950">
             {zabbix.version}
@@ -149,7 +149,7 @@ export function ZabbixCustomerOverview({
             <div>
               <h3 className="font-bold text-slate-900">Hosts monitorados</h3>
               <p className="text-sm text-slate-500">
-                Primeiros hosts retornados pelo grupo Zabbix do cliente.
+                Primeiros ativos retornados pelo monitoramento do cliente.
               </p>
             </div>
           </div>
@@ -185,7 +185,7 @@ export function ZabbixCustomerOverview({
 
             {zabbix.hosts.length === 0 && (
               <div className="rounded-2xl bg-slate-50 p-6 text-center text-sm text-slate-500">
-                Nenhum host retornado pelo Zabbix.
+                Nenhum ativo retornado pelo monitoramento.
               </div>
             )}
           </div>
@@ -201,7 +201,7 @@ export function ZabbixCustomerOverview({
                 Problemas recentes
               </h3>
               <p className="text-sm text-slate-500">
-                Eventos recentes retornados pelo Zabbix.
+                Eventos recentes retornados pelo monitoramento.
               </p>
             </div>
           </div>
@@ -234,7 +234,7 @@ export function ZabbixCustomerOverview({
 
             {zabbix.problems.length === 0 && (
               <div className="rounded-2xl bg-emerald-50 p-6 text-center text-sm font-semibold text-emerald-700">
-                Nenhum problema recente retornado pelo Zabbix.
+                Nenhum alerta recente retornado pelo monitoramento.
               </div>
             )}
           </div>
