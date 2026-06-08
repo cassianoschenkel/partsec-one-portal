@@ -13,6 +13,26 @@ import type {
   Tenant,
 } from "@/generated/prisma/client";
 
+function getCustomerIntegrationName(type: string) {
+  const labels: Record<string, string> = {
+    ZABBIX: "Monitoramento Operacional",
+    WAZUH: "SIEM",
+    ZAMMAD: "Central de Suporte",
+  };
+
+  return labels[type] ?? "Integração";
+}
+
+function getCustomerIntegrationType(type: string) {
+  const labels: Record<string, string> = {
+    ZABBIX: "Monitoramento",
+    WAZUH: "SIEM",
+    ZAMMAD: "Chamados",
+  };
+
+  return labels[type] ?? type;
+}
+
 type DashboardOverviewProps = {
   tenant: Tenant;
   summary: {
@@ -206,10 +226,10 @@ export function DashboardOverview({
               >
                 <div>
                   <div className="font-semibold text-slate-900">
-                    {integration.displayName}
+                    {getCustomerIntegrationName(integration.type)}
                   </div>
                   <div className="mt-1 text-sm text-slate-500">
-                    Tipo: {integration.type}
+                    Tipo: {getCustomerIntegrationType(integration.type)}
                   </div>
                 </div>
 
