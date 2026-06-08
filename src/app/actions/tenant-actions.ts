@@ -1,13 +1,15 @@
 "use server";
 
-import { sendEmail } from "@/lib/email/mailer";
-import { buildPasswordSetupEmail } from "@/lib/email/templates";
-import { createPasswordSetupToken } from "@/lib/password-setup-token";
-import { getZabbixClientForTenant } from "@/lib/integrations/zabbix-client";
-import { encryptSecret } from "@/lib/crypto";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { auth } from "@/../auth";
 import { prisma } from "@/lib/prisma";
+import { encryptSecret } from "@/lib/crypto";
 import { createSlug } from "@/lib/slug";
+import { getZabbixClientForTenant } from "@/lib/integrations/zabbix-client";
+import { createPasswordSetupToken } from "@/lib/password-setup-token";
+import { buildPasswordSetupEmail } from "@/lib/email/templates";
+import { sendEmail } from "@/lib/email/mailer";
 import {
   AssetType,
   IntegrationStatus,
@@ -415,4 +417,71 @@ export async function updateTenantAssetAction(
   });
 
   redirect(`/admin/tenants/${tenant.slug}`);
+}
+
+export async function linkSiemAgentToAssetAction({
+  tenantSlug,
+  assetId,
+  wazuhAgentId,
+}: {
+  tenantSlug: string;
+  assetId: string;
+  wazuhAgentId: string;
+}) {
+  const session = await auth();
+
+  if (!session?.user || session.user.role !== "PARTSEC_ADMIN") {
+    throw new Error("Acesso não autorizado.");
+  }
+
+  const tenant = await prisma.tenant.findUnique({
+    where: {
+      slug: tenantSlug,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!tenant) {
+    throw new Error("Tenant não encontrado.");
+  }
+
+  const agent = await prisma.siemAgentSnapshot.findUnique({
+    where: {
+      tenantId_wazuhAgentId: {
+        tenantId: tenant.id,
+        wazuhAgentId,
+      },
+    },
+  });
+
+  if (!agent) {
+    throw new Error("Agente SIEM não encontrado para este tenant.");
+  }
+
+  const asset = await prisma.customerAsset.findFirst({
+    where: {
+      id: assetId,
+      tenantId: tenant.id,
+      isActive: true,
+    },
+  });
+
+  if (!asset) {
+    throw new Error("Ativo não encontrado para este tenant.");
+  }
+
+  await prisma.customerAsset.update({
+    where: {
+      id: asset.id,
+    },
+    data: {
+      wazuhAgentId: agent.wazuhAgentId,
+    },
+  });
+
+  revalidatePath(`/admin/tenants/${tenantSlug}/siem`);
+  revalidatePath(`/admin/tenants/${tenantSlug}`);
+  revalidatePath("/assets");
 }
