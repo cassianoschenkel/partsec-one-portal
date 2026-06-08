@@ -11,6 +11,7 @@ import {
   Monitor,
   Settings,
   Ticket,
+  Bug,
 } from "lucide-react";
 
 const menuItems = [
@@ -48,6 +49,12 @@ const menuItems = [
     label: "Admin",
     href: "/admin/tenants",
     icon: Database,
+  },
+  {
+  label: "Vulnerabilidades",
+  href: "/vulnerabilities",
+  icon: Bug,
+  roles: ["TENANT_ADMIN", "TENANT_USER", "READ_ONLY"],
   },
 ];
 
