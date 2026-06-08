@@ -39,24 +39,25 @@ enum IntegrationStatus {
 }
 
 model Tenant {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String   @unique
-  document    String?
-  isActive    Boolean  @default(true)
+  id       String  @id @default(cuid())
+  name     String
+  slug     String  @unique
+  document String?
+  isActive Boolean @default(true)
 
-  users       User[]
-  assets      CustomerAsset[]
+  users        User[]
+  assets       CustomerAsset[]
   integrations IntegrationConfig[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("tenants")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   zabbixHostSnapshots    ZabbixHostSnapshot[]
   zabbixProblemSnapshots ZabbixProblemSnapshot[]
   integrationSyncLogs    IntegrationSyncLog[]
+  siemAgentSnapshots     SiemAgentSnapshot[]
+
+  @@map("tenants")
 }
 
 model User {
@@ -68,24 +69,24 @@ model User {
   role         UserRole @default(TENANT_USER)
   isActive     Boolean  @default(true)
 
-  tenant       Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  tenant              Tenant?              @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   passwordSetupTokens PasswordSetupToken[]
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([tenantId])
   @@map("users")
 }
 
 model PasswordSetupToken {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  tokenHash String   @unique
+  tokenHash String    @unique
   expiresAt DateTime
   usedAt    DateTime?
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -104,15 +105,15 @@ model CustomerAsset {
   operatingSystem String?
   description     String?
 
-  zabbixHostId    String?
-  wazuhAgentId    String?
+  zabbixHostId String?
+  wazuhAgentId String?
 
-  isActive        Boolean   @default(true)
+  isActive Boolean @default(true)
 
-  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([tenantId])
   @@index([zabbixHostId])
@@ -121,113 +122,142 @@ model CustomerAsset {
 }
 
 model IntegrationConfig {
-  id              String            @id @default(cuid())
-  tenantId        String
-  type            IntegrationType
-  status          IntegrationStatus @default(INACTIVE)
+  id       String            @id @default(cuid())
+  tenantId String
+  type     IntegrationType
+  status   IntegrationStatus @default(INACTIVE)
 
   displayName     String
   baseUrl         String?
   externalGroupId String?
   externalOrgId   String?
 
-  notes           String?
+  notes String?
 
-  tenant          Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  credentials     IntegrationCredential[]
+  tenant      Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  credentials IntegrationCredential[]
 
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@index([tenantId])
   @@unique([tenantId, type])
+  @@index([tenantId])
   @@map("integration_configs")
 }
 
 model IntegrationCredential {
-  id                  String            @id @default(cuid())
+  id                  String @id @default(cuid())
   integrationConfigId String
   key                 String
   encryptedValue      String
 
-  integrationConfig   IntegrationConfig @relation(fields: [integrationConfigId], references: [id], onDelete: Cascade)
+  integrationConfig IntegrationConfig @relation(fields: [integrationConfigId], references: [id], onDelete: Cascade)
 
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@index([integrationConfigId])
   @@unique([integrationConfigId, key])
+  @@index([integrationConfigId])
   @@map("integration_credentials")
 }
+
 model ZabbixHostSnapshot {
-  id          String   @id @default(cuid())
-  tenantId    String
+  id           String  @id @default(cuid())
+  tenantId     String
   zabbixHostId String
-  host        String
-  name        String
-  status      String
-  interfaceIp String?
+  host         String
+  name         String
+  status       String
+  interfaceIp  String?
   interfaceDns String?
-  rawData     Json?
+  rawData      Json?
 
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  syncedAt    DateTime @default(now())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  syncedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  @@unique([tenantId, zabbixHostId])
   @@index([tenantId])
   @@index([zabbixHostId])
-  @@unique([tenantId, zabbixHostId])
   @@map("zabbix_host_snapshots")
 }
 
 model ZabbixProblemSnapshot {
-  id            String   @id @default(cuid())
-  tenantId      String
-  eventId       String
-  objectId      String?
-  name          String
-  severity      String
-  clock         String
-  acknowledged  String
+  id           String  @id @default(cuid())
+  tenantId     String
+  eventId      String
+  objectId     String?
+  name         String
+  severity     String
+  clock        String
+  acknowledged String
 
   zabbixHostId      String?
   hostName          String?
   hostTechnicalName String?
 
-  status     String   @default("OPEN")
+  status     String    @default("OPEN")
   resolvedAt DateTime?
   lastSeenAt DateTime?
 
-  rawData       Json?
+  rawData Json?
 
-  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  syncedAt      DateTime @default(now())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  syncedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  @@unique([tenantId, eventId])
   @@index([tenantId])
   @@index([eventId])
-  @@unique([tenantId, eventId])
   @@map("zabbix_problem_snapshots")
 }
 
 model IntegrationSyncLog {
-  id            String          @id @default(cuid())
-  tenantId      String
+  id              String          @id @default(cuid())
+  tenantId        String
   integrationType IntegrationType
-  status        String
-  message       String?
-  startedAt     DateTime        @default(now())
-  finishedAt    DateTime?
-  durationMs    Int?
+  status          String
+  message         String?
+  startedAt       DateTime        @default(now())
+  finishedAt      DateTime?
+  durationMs      Int?
 
-  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
   @@index([integrationType])
   @@index([startedAt])
   @@map("integration_sync_logs")
+}
+
+model SiemAgentSnapshot {
+  id       String @id @default(cuid())
+  tenantId String
+
+  wazuhAgentId    String
+  name            String
+  ip              String?
+  status          String?
+  version         String?
+  operatingSystem String?
+  nodeName        String?
+  lastKeepAlive   DateTime?
+
+  rawData Json?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  syncedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, wazuhAgentId])
+  @@index([tenantId])
+  @@index([wazuhAgentId])
+  @@index([status])
+  @@map("siem_agent_snapshots")
 }
