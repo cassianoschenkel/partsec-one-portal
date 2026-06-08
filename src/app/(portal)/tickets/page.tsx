@@ -45,7 +45,7 @@ const roadmapItems = [
     status: "Planejado",
     title: "Sincronização de chamados",
     description:
-      "Importação periódica dos chamados do Zammad para snapshots internos no PostgreSQL.",
+      "Importação periódica dos chamados da Central de Suporte para snapshots internos no PostgreSQL.",
   },
   {
     status: "Planejado",
@@ -112,7 +112,7 @@ export default async function TicketsPage() {
                   Status da integração
                 </div>
                 <div className="mt-1 text-lg font-bold text-white">
-                  Aguardando integração Zammad
+                  Aguardando integração com a Central de Suporte
                 </div>
               </div>
             </div>
@@ -275,7 +275,7 @@ export default async function TicketsPage() {
             <div className="font-bold">Próxima etapa técnica</div>
             <p className="mt-1 text-sm leading-6">
               A próxima evolução deste módulo será implementar a integração com
-              o Zammad usando o mesmo padrão já adotado para o Zabbix: coleta
+              a Central de Suporte usando o mesmo padrão já adotado para o monitoramento operacional: coleta
               via API, gravação em snapshots internos no PostgreSQL e exibição
               no portal sem dependência de consulta em tempo real.
             </p>

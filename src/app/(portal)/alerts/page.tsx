@@ -218,7 +218,7 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
             </h2>
             <p className="mt-2 text-slate-600">
               Alertas reais de disponibilidade e performance sincronizados do
-              Zabbix para{" "}
+              monitoramento para{" "}
               <span className="font-semibold text-slate-900">
                 {data.tenant.name}
               </span>
@@ -249,7 +249,7 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
             <AlertTriangle className="mt-0.5 h-5 w-5" />
             <div>
               <h3 className="font-bold">
-                Última sincronização Zabbix com erro
+                Última sincronização do monitoramento com erro
               </h3>
               <p className="mt-1 text-sm leading-6">
                 A página está exibindo os últimos alertas disponíveis no banco.
@@ -503,7 +503,7 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
           </div>
           <div>
             <h3 className="text-lg font-bold text-slate-900">
-              Problemas recentes do Zabbix
+              Alertas recentes do monitoramento
             </h3>
             <p className="text-sm text-slate-500">
               Dados sincronizados periodicamente via snapshot interno.
@@ -605,9 +605,9 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
               Origem dos alertas
             </div>
             <p className="mt-1 text-sm leading-6 text-slate-500">
-              Esta tela exibe problemas sincronizados do Zabbix. A coleta é
+              Esta tela exibe alertas sincronizados do monitoramento operacional. A coleta é
               realizada por processo agendado, gravada no PostgreSQL e exibida
-              ao cliente sem consultar a API do Zabbix em tempo real.
+              ao cliente sem consultar a ferramenta de monitoramento em tempo real.
             </p>
           </div>
         </div>

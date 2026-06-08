@@ -139,7 +139,7 @@ export default async function SettingsPage() {
           <div>
             <h3 className="font-bold text-slate-900">Integrações</h3>
             <p className="text-sm text-slate-500">
-              Configurações de vínculo com Wazuh, Zabbix e Zammad.
+              Configurações de vínculo com SIEM, monitoramento e Central de Suporte.
             </p>
           </div>
         </div>

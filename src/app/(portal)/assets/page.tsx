@@ -176,7 +176,7 @@ export default async function AssetsPage({ searchParams }: AssetsPageProps) {
               Ativos
             </h2>
             <p className="mt-2 text-slate-600">
-              Inventário operacional sincronizado a partir do Zabbix para{" "}
+              Inventário operacional sincronizado a partir do monitoramento para{" "}
               <span className="font-semibold text-slate-900">
                 {data.tenant.name}
               </span>
@@ -293,7 +293,7 @@ export default async function AssetsPage({ searchParams }: AssetsPageProps) {
             >
               <option value="all">Todos</option>
               <option value="monitored">Monitorados</option>
-              <option value="linked">Vinculados ao Zabbix</option>
+              <option value="linked">Vinculados ao monitoramento</option>
               <option value="pending">Pendências</option>
               <option value="unlinked">Sem vínculo</option>
             </select>
@@ -374,7 +374,7 @@ export default async function AssetsPage({ searchParams }: AssetsPageProps) {
             </h3>
             <p className="text-sm text-slate-500">
               Ativos importados e atualizados automaticamente a partir dos hosts
-              monitorados no Zabbix.
+              monitorados pela plataforma.
             </p>
           </div>
         </div>
@@ -387,7 +387,7 @@ export default async function AssetsPage({ searchParams }: AssetsPageProps) {
                 <th className="px-4 py-3 font-semibold">Tipo</th>
                 <th className="px-4 py-3 font-semibold">Status operacional</th>
                 <th className="px-4 py-3 font-semibold">Interface</th>
-                <th className="px-4 py-3 font-semibold">Zabbix</th>
+                <th className="px-4 py-3 font-semibold">Monitoramento</th>
                 <th className="px-4 py-3 font-semibold">Última sync</th>
               </tr>
             </thead>
@@ -486,7 +486,7 @@ export default async function AssetsPage({ searchParams }: AssetsPageProps) {
               Origem e sincronização
             </h3>
             <p className="text-sm text-slate-500">
-              O Zabbix permanece como fonte técnica dos hosts monitorados. O
+              A camada de monitoramento permanece como fonte técnica dos hosts monitorados. O
               portal importa novos hosts como ativos e atualiza dados técnicos,
               como nome, hostname e IP, sem depender da API em tempo real na
               navegação do cliente.

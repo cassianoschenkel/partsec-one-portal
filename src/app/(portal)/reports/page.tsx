@@ -40,7 +40,7 @@ const reportTypes = [
   {
     title: "Relatório de Segurança",
     description:
-      "Base futura para eventos do SIEM/Wazuh, incidentes relevantes, agentes monitorados e ocorrências de segurança.",
+      "Base futura para eventos do SIEM, incidentes relevantes, agentes monitorados e ocorrências de segurança.",
     icon: Lock,
     status: "Futuro",
   },
@@ -51,7 +51,7 @@ const roadmapItems = [
     phase: "Fase 1",
     title: "Relatórios baseados em snapshots",
     description:
-      "Usar os dados já sincronizados do Zabbix no PostgreSQL para gerar visões executivas por período.",
+      "Usar os dados já sincronizados do monitoramento operacional no PostgreSQL para gerar visões executivas por período.",
   },
   {
     phase: "Fase 2",
@@ -69,14 +69,14 @@ const roadmapItems = [
     phase: "Fase 4",
     title: "Relatórios integrados",
     description:
-      "Combinar dados de Zabbix, Zammad e Wazuh para uma visão completa de operação, suporte e segurança.",
+      "Combinar dados de monitoramento, suporte e SIEM para uma visão completa de operação, suporte e segurança.",
   },
 ];
 
 const previewMetrics = [
   {
     label: "Ativos monitorados",
-    value: "Zabbix",
+    value: "Monitoramento",
     description: "Fonte operacional já integrada ao portal.",
     icon: BarChart3,
   },
@@ -89,13 +89,13 @@ const previewMetrics = [
   {
     label: "Chamados/SLA",
     value: "Planejado",
-    description: "Será habilitado com a integração Zammad.",
+    description: "Será habilitado com a integração com a Central de Suporte.",
     icon: CalendarClock,
   },
   {
     label: "Segurança/SIEM",
     value: "Futuro",
-    description: "Será habilitado com a integração Wazuh.",
+    description: "Será habilitado com a integração SIEM.",
     icon: Lock,
   },
 ];
@@ -320,7 +320,7 @@ export default async function ReportsPage() {
           <div>
             <div className="font-bold">Base técnica já preparada</div>
             <p className="mt-1 text-sm leading-6">
-              O portal já possui snapshots internos de Zabbix para hosts,
+              O portal já possui snapshots internos de monitoramento para hosts,
               problemas, status, resolução e períodos filtráveis. Essa base
               será usada como primeiro insumo para relatórios executivos e
               técnicos.

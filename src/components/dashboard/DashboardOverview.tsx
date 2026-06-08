@@ -92,7 +92,7 @@ export function DashboardOverview({
     {
       title: "Chamados abertos",
       value: "3",
-      description: "Mockado até integração Zammad",
+      description: "Aguardando integração com a Central de Suporte",
       icon: TicketCheck,
     },
   ];
@@ -230,7 +230,7 @@ export function DashboardOverview({
                 Segurança
               </h3>
               <p className="text-sm text-slate-500">
-                Eventos mockados até integração Wazuh.
+                Eventos de segurança serão exibidos após integração com o SIEM.
               </p>
             </div>
             <ShieldAlert className="h-6 w-6 text-slate-700" />
@@ -271,7 +271,7 @@ export function DashboardOverview({
                 Monitoramento
               </h3>
               <p className="text-sm text-slate-500">
-                Alertas mockados até integração Zabbix.
+                Alertas operacionais serão exibidos após integração com o monitoramento.
               </p>
             </div>
             <AlertTriangle className="h-6 w-6 text-slate-700" />
@@ -318,7 +318,7 @@ export function DashboardOverview({
           {[
             "Tenant carregado a partir do PostgreSQL",
             "Inventário inicial carregado do modelo CustomerAsset",
-            "Integrações Zabbix, Wazuh e Zammad mapeadas",
+            "Integrações de monitoramento, SIEM e Central de Suporte mapeadas",
             "Alertas ainda em modo demonstração",
           ].map((event) => (
             <div

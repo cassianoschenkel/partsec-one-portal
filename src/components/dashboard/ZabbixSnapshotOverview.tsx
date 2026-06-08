@@ -107,7 +107,7 @@ export function ZabbixSnapshotOverview({
           <div>
             <h3 className="font-bold">Monitoramento ainda não sincronizado</h3>
             <p className="mt-1 text-sm leading-6">
-              Ainda não há dados de snapshot do Zabbix para este tenant.
+              Ainda não há dados de monitoramento para este cliente.
             </p>
             {snapshot.errorMessage && (
               <p className="mt-2 text-xs leading-5 text-amber-800">
@@ -138,7 +138,7 @@ export function ZabbixSnapshotOverview({
           </h2>
           <p className="mt-2 text-slate-600">
             {generalStatus}. Dados consolidados a partir da última
-            sincronização com o Zabbix.
+            sincronização com o monitoramento operacional.
           </p>
         </div>
 
@@ -257,7 +257,7 @@ export function ZabbixSnapshotOverview({
             <div>
               <h3 className="font-bold text-slate-900">Ativos monitorados</h3>
               <p className="text-sm text-slate-500">
-                Primeiros hosts sincronizados do grupo Zabbix do cliente.
+                Primeiros ativos sincronizados pelo monitoramento operacional.
               </p>
             </div>
           </div>
