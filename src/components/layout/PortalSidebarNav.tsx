@@ -36,6 +36,12 @@ const menuItems = [
     icon: Ticket,
   },
   {
+  label: "Vulnerabilidades",
+  href: "/vulnerabilities",
+  icon: Bug,
+  roles: ["TENANT_ADMIN", "TENANT_USER", "READ_ONLY"],
+  },
+  {
     label: "Relatórios",
     href: "/reports",
     icon: FileText,
@@ -49,12 +55,6 @@ const menuItems = [
     label: "Admin",
     href: "/admin/tenants",
     icon: Database,
-  },
-  {
-  label: "Vulnerabilidades",
-  href: "/vulnerabilities",
-  icon: Bug,
-  roles: ["TENANT_ADMIN", "TENANT_USER", "READ_ONLY"],
   },
 ];
 
