@@ -21,6 +21,12 @@ type TenantSiemPageProps = {
   }>;
 };
 
+type TenantSiemAgentsOverview = NonNullable<
+  Awaited<ReturnType<typeof getTenantSiemAgentsOverview>>
+>;
+
+type TenantSiemAgent = TenantSiemAgentsOverview["agents"][number];
+
 function formatDateTime(date?: Date | null) {
   if (!date) {
     return "—";
@@ -276,7 +282,7 @@ export default async function TenantSiemPage({
               </thead>
 
               <tbody className="divide-y divide-slate-100 bg-white">
-                {data.agents.map((agent) => (
+		  {data.agents.map((agent: TenantSiemAgent) => (
                   <tr key={agent.id} className="align-top">
                     <td className="px-4 py-4">
                       <div className="font-bold text-slate-900">
