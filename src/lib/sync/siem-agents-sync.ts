@@ -69,8 +69,8 @@ export async function syncTenantSiemAgents({
   });
 
   try {
-    const { client } = await getSiemClientForTenant(tenantSlug);
-    const agents = await client.getAgents();
+	const { client, integration } = await getSiemClientForTenant(tenantSlug);
+	const agents = await client.getAgents(integration.externalGroupId);
 
     const syncedAt = new Date();
 
@@ -108,6 +108,19 @@ export async function syncTenantSiemAgents({
         },
       });
     }
+	
+	const currentAgentIds = agents.map((agent) => agent.id);
+
+	if (currentAgentIds.length > 0) {
+	  await prisma.siemAgentSnapshot.deleteMany({
+		where: {
+		  tenantId,
+		  wazuhAgentId: {
+			notIn: currentAgentIds,
+		  },
+		},
+	  });
+	}
 
     const durationMs = Date.now() - startTime;
 
@@ -117,7 +130,9 @@ export async function syncTenantSiemAgents({
       },
       data: {
         status: "SUCCESS",
-        message: `Sincronização SIEM concluída. Agentes: ${agents.length}.`,
+		message: `Sincronização SIEM concluída. Grupo: ${
+		  integration.externalGroupId ?? "todos"
+		}. Agentes: ${agents.length}.`,
         finishedAt: new Date(),
         durationMs,
       },

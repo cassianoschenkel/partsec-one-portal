@@ -121,31 +121,37 @@ export class SiemClient {
     return payload;
   }
 
-  async getAgents() {
-    const agents: SiemAgentRaw[] = [];
-    let offset = 0;
-    const limit = 500;
+	async getAgents(group?: string | null) {
+	  const agents: SiemAgentRaw[] = [];
+	  let offset = 0;
+	  const limit = 500;
 
-    while (true) {
-      const payload = await this.get<SiemAgentRaw>("/agents", {
-        limit,
-        offset,
-        sort: "+name",
-      });
+	  while (true) {
+		const query: Record<string, string | number> = {
+		  limit,
+		  offset,
+		  sort: "+name",
+		};
 
-      const items = payload.data?.affected_items ?? [];
+		if (group) {
+		  query.group = group;
+		}
 
-      agents.push(...items);
+		const payload = await this.get<SiemAgentRaw>("/agents", query);
 
-      if (items.length < limit) {
-        break;
-      }
+		const items = payload.data?.affected_items ?? [];
 
-      offset += limit;
-    }
+		agents.push(...items);
 
-    return agents;
-  }
+		if (items.length < limit) {
+		  break;
+		}
+
+		offset += limit;
+	  }
+
+	  return agents;
+	}
 }
 
 export async function getSiemClientForTenant(tenantSlug: string) {
