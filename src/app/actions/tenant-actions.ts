@@ -277,17 +277,40 @@ export async function updateTenantIntegrationAction(
   redirect(`/admin/tenants/${tenant.slug}/integrations`);
 }
 
+async function upsertIntegrationCredential({
+  integrationConfigId,
+  key,
+  value,
+}: {
+  integrationConfigId: string;
+  key: string;
+  value: string;
+}) {
+  const encryptedValue = encryptSecret(value);
+
+  await prisma.integrationCredential.upsert({
+    where: {
+      integrationConfigId_key: {
+        integrationConfigId,
+        key,
+      },
+    },
+    update: {
+      encryptedValue,
+    },
+    create: {
+      integrationConfigId,
+      key,
+      encryptedValue,
+    },
+  });
+}
+
 export async function updateTenantIntegrationCredentialAction(
   tenantSlug: string,
   integrationType: IntegrationType,
   formData: FormData
 ) {
-  const apiToken = String(formData.get("apiToken") ?? "").trim();
-
-  if (!apiToken) {
-    throw new Error("API token é obrigatório.");
-  }
-
   const tenant = await prisma.tenant.findUnique({
     where: {
       slug: tenantSlug,
@@ -311,23 +334,45 @@ export async function updateTenantIntegrationCredentialAction(
     throw new Error("Integração não encontrada.");
   }
 
-  const encryptedValue = encryptSecret(apiToken);
+  if (integrationType === IntegrationType.WAZUH) {
+    const apiUsername = String(formData.get("apiUsername") ?? "").trim();
+    const apiPassword = String(formData.get("apiPassword") ?? "").trim();
 
-  await prisma.integrationCredential.upsert({
-    where: {
-      integrationConfigId_key: {
+    if (!apiUsername && !apiPassword) {
+      throw new Error(
+        "Informe usuário e/ou senha da API para atualizar as credenciais SIEM."
+      );
+    }
+
+    if (apiUsername) {
+      await upsertIntegrationCredential({
         integrationConfigId: integration.id,
-        key: "api_token",
-      },
-    },
-    update: {
-      encryptedValue,
-    },
-    create: {
-      integrationConfigId: integration.id,
-      key: "api_token",
-      encryptedValue,
-    },
+        key: "api_username",
+        value: apiUsername,
+      });
+    }
+
+    if (apiPassword) {
+      await upsertIntegrationCredential({
+        integrationConfigId: integration.id,
+        key: "api_password",
+        value: apiPassword,
+      });
+    }
+
+    redirect(`/admin/tenants/${tenant.slug}/integrations`);
+  }
+
+  const apiToken = String(formData.get("apiToken") ?? "").trim();
+
+  if (!apiToken) {
+    throw new Error("API token é obrigatório.");
+  }
+
+  await upsertIntegrationCredential({
+    integrationConfigId: integration.id,
+    key: "api_token",
+    value: apiToken,
   });
 
   redirect(`/admin/tenants/${tenant.slug}/integrations`);
