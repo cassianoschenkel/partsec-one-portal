@@ -337,8 +337,10 @@ export async function updateTenantIntegrationCredentialAction(
   if (integrationType === IntegrationType.WAZUH) {
     const apiUsername = String(formData.get("apiUsername") ?? "").trim();
     const apiPassword = String(formData.get("apiPassword") ?? "").trim();
+    const indexerUsername = String(formData.get("indexerUsername") ?? "").trim();
+    const indexerPassword = String(formData.get("indexerPassword") ?? "").trim();
 
-    if (!apiUsername && !apiPassword) {
+    if (!apiUsername && !apiPassword && !indexerUsername && !indexerPassword) {
       throw new Error(
         "Informe usuário e/ou senha da API para atualizar as credenciais SIEM."
       );
@@ -359,6 +361,22 @@ export async function updateTenantIntegrationCredentialAction(
         value: apiPassword,
       });
     }
+
+    if (indexerUsername) {
+	  await upsertIntegrationCredential({
+		integrationConfigId: integration.id,
+		key: "indexer_username",
+		value: indexerUsername,
+  });
+}
+
+	if (indexerPassword) {
+	  await upsertIntegrationCredential({
+		integrationConfigId: integration.id,
+		key: "indexer_password",
+		value: indexerPassword,
+  });
+}
 
     redirect(`/admin/tenants/${tenant.slug}/integrations`);
   }

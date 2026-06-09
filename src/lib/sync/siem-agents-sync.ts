@@ -121,6 +121,19 @@ export async function syncTenantSiemAgents({
 		},
 	  });
 	}
+	
+	//const currentAgentIds = agents.map((agent) => agent.id);
+
+	if (currentAgentIds.length > 0) {
+	  await prisma.siemAgentSnapshot.deleteMany({
+		where: {
+		  tenantId,
+		  wazuhAgentId: {
+			notIn: currentAgentIds,
+		  },
+		},
+	  });
+	}
 
     const durationMs = Date.now() - startTime;
 

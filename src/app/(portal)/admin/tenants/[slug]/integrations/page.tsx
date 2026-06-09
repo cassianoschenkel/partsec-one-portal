@@ -261,22 +261,34 @@ export default async function TenantIntegrationsPage({
                       )}
                     </div>
 
-                    <div>
-                      <label
-                        htmlFor={`${integration.type}-externalOrgId`}
-                        className="mb-2 block text-sm font-semibold text-slate-700"
-                      >
-                        External Org ID
-                      </label>
-                      <input
-                        id={`${integration.type}-externalOrgId`}
-                        name="externalOrgId"
-                        type="text"
-                        defaultValue={integration.externalOrgId ?? ""}
-                        placeholder="Ex: organization-id"
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900"
-                      />
-                    </div>
+					<div>
+					  <label
+						htmlFor={`${integration.type}-externalOrgId`}
+						className="mb-2 block text-sm font-semibold text-slate-700"
+					  >
+						{integration.type === IntegrationType.WAZUH
+						  ? "URL do SIEM Indexer"
+						  : "External Org ID"}
+					  </label>
+					  <input
+						id={`${integration.type}-externalOrgId`}
+						name="externalOrgId"
+						type="text"
+						defaultValue={integration.externalOrgId ?? ""}
+						placeholder={
+						  integration.type === IntegrationType.WAZUH
+							? "Ex: https://dash.partsec.com.br:9200"
+							: "Ex: organization-id"
+						}
+						className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900"
+					  />
+					  {integration.type === IntegrationType.WAZUH && (
+						<p className="mt-2 text-xs leading-5 text-slate-500">
+						  URL da API do Indexer usada para consultar vulnerabilidades do SIEM.
+						  Exemplo: https://dash.partsec.com.br:9200.
+						</p>
+					  )}
+					</div>
 
                     <div className="md:col-span-2">
                       <label
@@ -375,6 +387,48 @@ export default async function TenantIntegrationsPage({
                           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900"
                         />
                       </div>
+					  
+					  <div className="border-t border-slate-200 pt-4">
+						  <div className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-400">
+							SIEM Indexer
+						  </div>
+
+						  <div className="space-y-4">
+							<div>
+							  <label
+								htmlFor={`${integration.type}-indexerUsername`}
+								className="mb-2 block text-sm font-semibold text-slate-700"
+							  >
+								Usuário do Indexer
+							  </label>
+							  <input
+								id={`${integration.type}-indexerUsername`}
+								name="indexerUsername"
+								type="text"
+								autoComplete="off"
+								placeholder="Ex: portal.ska-indexer"
+								className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900"
+							  />
+							</div>
+
+							<div>
+							  <label
+								htmlFor={`${integration.type}-indexerPassword`}
+								className="mb-2 block text-sm font-semibold text-slate-700"
+							  >
+								Senha do Indexer
+							  </label>
+							  <input
+								id={`${integration.type}-indexerPassword`}
+								name="indexerPassword"
+								type="password"
+								autoComplete="new-password"
+								placeholder="Preencha apenas para cadastrar ou alterar"
+								className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900"
+							  />
+							</div>
+						  </div>
+						</div>
 
                       <p className="text-xs leading-5 text-slate-500">
                         As credenciais não serão exibidas novamente após salvas.
@@ -417,17 +471,17 @@ export default async function TenantIntegrationsPage({
                       : "Salvar token"}
                   </button>
 
-                  {testZabbixForTenant && (
-                    <form action={testZabbixForTenant}>
-                      <button
-                        type="submit"
-                        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-800 transition hover:bg-slate-100"
-                      >
-                        Testar conexão Zabbix
-                      </button>
-                    </form>
-                  )}
                 </form>
+		                {testZabbixForTenant && (
+                  <form action={testZabbixForTenant} className="xl:col-start-3">
+                    <button
+                      type="submit"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-800 transition hover:bg-slate-100"
+                    >
+                      Testar conexão Zabbix
+                    </button>
+                  </form>
+                )}
               </div>
             </div>
           );

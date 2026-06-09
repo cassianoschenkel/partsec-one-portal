@@ -52,10 +52,11 @@ model Tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  zabbixHostSnapshots    ZabbixHostSnapshot[]
-  zabbixProblemSnapshots ZabbixProblemSnapshot[]
-  integrationSyncLogs    IntegrationSyncLog[]
-  siemAgentSnapshots     SiemAgentSnapshot[]
+  zabbixHostSnapshots        ZabbixHostSnapshot[]
+  zabbixProblemSnapshots     ZabbixProblemSnapshot[]
+  integrationSyncLogs        IntegrationSyncLog[]
+  siemAgentSnapshots         SiemAgentSnapshot[]
+  siemVulnerabilitySnapshots SiemVulnerabilitySnapshot[]
 
   @@map("tenants")
 }
@@ -260,4 +261,44 @@ model SiemAgentSnapshot {
   @@index([wazuhAgentId])
   @@index([status])
   @@map("siem_agent_snapshots")
+}
+
+model SiemVulnerabilitySnapshot {
+  id           String @id @default(cuid())
+  tenantId     String
+  wazuhAgentId String
+
+  cve               String
+  title             String?
+  severity          String?
+  score             Float?
+  packageName       String  @default("")
+  packageVersion    String  @default("")
+  fixedVersion      String?
+  architecture      String?
+  condition         String?
+  externalReference String?
+
+  status                 String    @default("OPEN")
+  detectedAt             DateTime?
+  publishedAt            DateTime?
+  vulnerabilityUpdatedAt DateTime?
+  lastSeenAt             DateTime?
+  resolvedAt             DateTime?
+
+  rawData Json?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  syncedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, wazuhAgentId, cve, packageName, packageVersion])
+  @@index([tenantId])
+  @@index([wazuhAgentId])
+  @@index([cve])
+  @@index([severity])
+  @@index([status])
+  @@map("siem_vulnerability_snapshots")
 }
