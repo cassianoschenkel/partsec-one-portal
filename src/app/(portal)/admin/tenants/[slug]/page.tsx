@@ -8,6 +8,7 @@ import {
   MonitorCheck,
   Plug,
   Users,
+  ShieldAlert,
 } from "lucide-react";
 
 type AdminTenantDetailPageProps = {
@@ -121,7 +122,7 @@ type AdminTenantDetailPageProps = {
 	  </section>
 	)}
 
-      <section className="grid gap-5 md:grid-cols-4">
+      <section className="grid gap-5 md:grid-cols-5">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-4 w-fit rounded-2xl bg-slate-100 p-3">
             <Users className="h-6 w-6 text-slate-800" />
@@ -169,6 +170,24 @@ type AdminTenantDetailPageProps = {
             Em implantação
           </div>
         </div>
+		
+		<Link
+		  href={`/admin/tenants/${tenant.slug}/vulnerabilities`}
+		  className="group rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+		>
+		  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 transition group-hover:bg-slate-200">
+			<ShieldAlert className="h-6 w-6 text-slate-800" />
+		  </div>
+
+		  <h3 className="text-base font-bold text-slate-950">
+			Vulnerabilidades
+		  </h3>
+
+		  <p className="mt-2 text-sm leading-6 text-slate-500">
+			Visualizar vulnerabilidades identificadas nos ativos deste tenant.
+		  </p>
+		</Link>
+		
       </section>
 
       <section className="grid gap-6 xl:grid-cols-3">
