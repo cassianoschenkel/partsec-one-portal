@@ -1,474 +1,283 @@
-import { redirect } from "next/navigation";
-import { auth } from "@/../auth";
 import {
   AlertTriangle,
-  BarChart3,
   Bug,
   CheckCircle2,
-  Clock,
-  DatabaseZap,
-  FileWarning,
-  Gauge,
-  Layers,
-  PackageSearch,
-  Server,
   ShieldAlert,
   ShieldCheck,
-  Sparkles,
 } from "lucide-react";
+import { getTenantVulnerabilitiesOverview } from "@/lib/queries/vulnerabilities";
 
-const severityCards = [
-  {
-    label: "Críticas",
-    value: "—",
-    description: "Vulnerabilidades de maior prioridade para correção.",
-    icon: ShieldAlert,
-    className: "text-red-700",
-    iconClassName: "bg-red-50 text-red-700",
-  },
-  {
-    label: "Altas",
-    value: "—",
-    description: "Exposições relevantes que exigem plano de remediação.",
-    icon: AlertTriangle,
-    className: "text-orange-700",
-    iconClassName: "bg-orange-50 text-orange-700",
-  },
-  {
-    label: "Médias",
-    value: "—",
-    description: "Riscos que devem ser acompanhados e priorizados.",
-    icon: Gauge,
-    className: "text-amber-700",
-    iconClassName: "bg-amber-50 text-amber-700",
-  },
-  {
-    label: "Baixas",
-    value: "—",
-    description: "Vulnerabilidades de menor criticidade operacional.",
-    icon: CheckCircle2,
-    className: "text-emerald-700",
-    iconClassName: "bg-emerald-50 text-emerald-700",
-  },
-];
-
-const plannedCapabilities = [
-  {
-    title: "Exposição por criticidade",
-    description:
-      "Consolidação de vulnerabilidades por severidade, permitindo priorização por risco.",
-    icon: BarChart3,
-  },
-  {
-    title: "Ativos mais afetados",
-    description:
-      "Identificação dos servidores, endpoints e ativos com maior concentração de vulnerabilidades.",
-    icon: Server,
-  },
-  {
-    title: "Pacotes vulneráveis",
-    description:
-      "Ranking de pacotes, softwares e componentes com maior recorrência de exposição.",
-    icon: PackageSearch,
-  },
-  {
-    title: "Ciclo de remediação",
-    description:
-      "Acompanhamento de vulnerabilidades abertas, mitigadas e resolvidas ao longo do tempo.",
-    icon: ShieldCheck,
-  },
-];
-
-const roadmapItems = [
-  {
-    phase: "Fase 1",
-    title: "Sincronização de agentes de segurança",
-    description:
-      "Coletar os agentes vinculados aos ativos monitorados e relacioná-los ao inventário do portal.",
-  },
-  {
-    phase: "Fase 2",
-    title: "Snapshots de vulnerabilidades",
-    description:
-      "Persistir vulnerabilidades detectadas pelo SIEM em snapshots internos no PostgreSQL.",
-  },
-  {
-    phase: "Fase 3",
-    title: "Dashboard de exposição",
-    description:
-      "Exibir totais por criticidade, ativos afetados, pacotes vulneráveis e histórico de detecção.",
-  },
-  {
-    phase: "Fase 4",
-    title: "Relatórios executivos",
-    description:
-      "Incluir exposição de vulnerabilidades nos relatórios mensais do Partsec One.",
-  },
-];
-
-const exampleRows = [
-  {
-    severity: "Crítica",
-    asset: "Servidor de aplicação",
-    packageName: "Sistema operacional / componente base",
-    cve: "CVE-XXXX-0001",
-    status: "Aberta",
-  },
-  {
-    severity: "Alta",
-    asset: "Servidor de banco de dados",
-    packageName: "Componente de banco de dados",
-    cve: "CVE-XXXX-0002",
-    status: "Aberta",
-  },
-  {
-    severity: "Média",
-    asset: "Endpoint administrativo",
-    packageName: "Pacote de sistema",
-    cve: "CVE-XXXX-0003",
-    status: "Em análise",
-  },
-];
-
-function getSeverityBadgeClass(severity: string) {
-  if (severity === "Crítica") {
-    return "bg-red-50 text-red-700";
+function formatDate(value: string | null) {
+  if (!value) {
+    return "—";
   }
 
-  if (severity === "Alta") {
-    return "bg-orange-50 text-orange-700";
-  }
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
 
-  if (severity === "Média") {
-    return "bg-amber-50 text-amber-700";
+function getSeverityBadgeClass(severity: string | null) {
+  switch (severity) {
+    case "CRITICAL":
+      return "bg-red-100 text-red-800 border-red-200";
+    case "HIGH":
+      return "bg-orange-100 text-orange-800 border-orange-200";
+    case "MEDIUM":
+      return "bg-amber-100 text-amber-800 border-amber-200";
+    case "LOW":
+      return "bg-sky-100 text-sky-800 border-sky-200";
+    default:
+      return "bg-slate-100 text-slate-700 border-slate-200";
   }
+}
 
-  return "bg-slate-100 text-slate-600";
+function translateSeverity(severity: string | null) {
+  switch (severity) {
+    case "CRITICAL":
+      return "Crítica";
+    case "HIGH":
+      return "Alta";
+    case "MEDIUM":
+      return "Média";
+    case "LOW":
+      return "Baixa";
+    default:
+      return "Não classificada";
+  }
+}
+
+function SummaryCard({
+  title,
+  value,
+  description,
+  icon: Icon,
+}: {
+  title: string;
+  value: number;
+  description: string;
+  icon: typeof ShieldAlert;
+}) {
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-slate-500">{title}</p>
+          <p className="mt-2 text-3xl font-bold text-slate-950">{value}</p>
+        </div>
+
+        <div className="rounded-2xl bg-slate-100 p-3">
+          <Icon className="h-6 w-6 text-slate-800" />
+        </div>
+      </div>
+
+      <p className="mt-4 text-xs leading-5 text-slate-500">{description}</p>
+    </div>
+  );
 }
 
 export default async function VulnerabilitiesPage() {
-  const session = await auth();
+const { hasTenant, summary, vulnerabilities } =
+  await getTenantVulnerabilitiesOverview();
 
-  if (!session?.user) {
-    redirect("/login");
-  }
+if (!hasTenant) {
+  return (
+    <div className="space-y-8">
+      <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-700">
+          <ShieldAlert className="h-4 w-4" />
+          Tenant não associado
+        </div>
 
-  if (session.user.role === "PARTSEC_ADMIN") {
-    redirect("/admin/tenants");
-  }
+        <h1 className="text-2xl font-bold tracking-tight text-slate-950">
+          Vulnerabilidades indisponíveis para este usuário
+        </h1>
+
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
+          Este usuário não está associado a um tenant específico. Para visualizar
+          vulnerabilidades, acesse com um usuário do tenant cliente ou associe
+          este usuário a um tenant.
+        </p>
+      </section>
+    </div>
+  );
+}
 
   return (
     <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-[#071426] p-8 text-white shadow-sm">
-        <div className="absolute right-0 top-0 h-48 w-48 rounded-full bg-red-400/10 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 h-40 w-40 rounded-full bg-cyan-400/10 blur-3xl" />
-
-        <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
           <div>
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-wide text-cyan-100">
-              <Bug className="h-4 w-4" />
-              Módulo em implantação
-            </div>
-
-            <h2 className="text-3xl font-bold tracking-tight">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-500">
+              <ShieldAlert className="h-4 w-4" />
               Vulnerabilidades
-            </h2>
+            </div>
 
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-200">
-              Esta área será dedicada à consolidação da exposição de
-              vulnerabilidades identificadas pelos agentes de segurança
-              vinculados aos ativos monitorados.
+            <h1 className="text-2xl font-bold tracking-tight text-slate-950">
+              Exposição técnica dos ativos monitorados
+            </h1>
+
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+              Visão consolidada das vulnerabilidades identificadas nos ativos
+              com agente de segurança associado ao tenant.
             </p>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur">
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-amber-400/20 p-3">
-                <Clock className="h-6 w-6 text-amber-200" />
-              </div>
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide text-slate-300">
-                  Origem planejada
-                </div>
-                <div className="mt-1 text-lg font-bold text-white">
-                  SIEM / Agentes de segurança
-                </div>
-              </div>
-            </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            <span className="font-semibold text-slate-900">
+              {summary.open}
+            </span>{" "}
+            vulnerabilidades abertas
           </div>
         </div>
       </section>
 
-      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-        {severityCards.map((card) => {
-          const Icon = card.icon;
+      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
+        <SummaryCard
+          title="Críticas"
+          value={summary.critical}
+          description="Exigem priorização máxima."
+          icon={ShieldAlert}
+        />
 
-          return (
-            <div
-              key={card.label}
-              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
-            >
-              <div
-                className={[
-                  "mb-4 w-fit rounded-2xl p-3",
-                  card.iconClassName,
-                ].join(" ")}
-              >
-                <Icon className="h-6 w-6" />
-              </div>
+        <SummaryCard
+          title="Altas"
+          value={summary.high}
+          description="Devem entrar no próximo ciclo de correção."
+          icon={AlertTriangle}
+        />
 
-              <div className="text-sm font-medium text-slate-500">
-                {card.label}
-              </div>
+        <SummaryCard
+          title="Médias"
+          value={summary.medium}
+          description="Acompanhar por exposição e criticidade do ativo."
+          icon={Bug}
+        />
 
-              <div className={["mt-2 text-3xl font-bold", card.className].join(" ")}>
-                {card.value}
-              </div>
+        <SummaryCard
+          title="Baixas"
+          value={summary.low}
+          description="Risco reduzido, mas devem permanecer visíveis."
+          icon={ShieldCheck}
+        />
 
-              <p className="mt-3 text-xs leading-5 text-slate-500">
-                {card.description}
-              </p>
-            </div>
-          );
-        })}
+        <SummaryCard
+          title="Resolvidas"
+          value={summary.resolved}
+          description="Itens que não aparecem mais no último ciclo."
+          icon={CheckCircle2}
+        />
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="rounded-2xl bg-slate-100 p-3">
-              <PackageSearch className="h-6 w-6 text-slate-800" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">
-                Top pacotes vulneráveis
-              </h3>
-              <p className="text-sm text-slate-500">
-                Visão planejada dos pacotes e componentes com maior recorrência
-                de vulnerabilidades.
-              </p>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm">
-              <Layers className="h-7 w-7 text-slate-700" />
-            </div>
-
-            <h4 className="text-lg font-bold text-slate-900">
-              Dados aguardando integração
-            </h4>
-
-            <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Após a ativação do módulo, esta área exibirá os pacotes mais
-              afetados, quantidade de ocorrências e distribuição por
-              criticidade.
-            </p>
-          </div>
+      <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 p-6">
+          <h2 className="text-lg font-bold text-slate-950">
+            Vulnerabilidades abertas
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Listagem limitada aos 200 itens abertos mais relevantes, ordenados
+            por severidade e score.
+          </p>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="rounded-2xl bg-slate-100 p-3">
-              <Server className="h-6 w-6 text-slate-800" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">
-                Ativos mais afetados
-              </h3>
-              <p className="text-sm text-slate-500">
-                Visão planejada dos ativos com maior exposição.
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-              <div className="font-semibold text-slate-900">
-                Servidores críticos
-              </div>
-              <div className="mt-1 text-sm text-slate-500">
-                Priorização por criticidade e função do ativo.
-              </div>
+        {vulnerabilities.length === 0 ? (
+          <div className="p-8 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50">
+              <ShieldCheck className="h-6 w-6 text-emerald-700" />
             </div>
 
-            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-              <div className="font-semibold text-slate-900">
-                Endpoints administrativos
-              </div>
-              <div className="mt-1 text-sm text-slate-500">
-                Exposição relacionada a estações e notebooks sensíveis.
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-              <div className="font-semibold text-slate-900">
-                Serviços expostos
-              </div>
-              <div className="mt-1 text-sm text-slate-500">
-                Correlação futura com serviços e sistemas monitorados.
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-6 flex items-center gap-3">
-          <div className="rounded-2xl bg-slate-100 p-3">
-            <Sparkles className="h-6 w-6 text-slate-800" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-slate-900">
-              Capacidades previstas
+            <h3 className="text-base font-bold text-slate-950">
+              Nenhuma vulnerabilidade aberta encontrada
             </h3>
-            <p className="text-sm text-slate-500">
-              A página será evoluída para transformar detecções técnicas em
-              priorização executiva de risco.
+
+            <p className="mt-2 text-sm text-slate-500">
+              O último ciclo de sincronização não encontrou vulnerabilidades
+              abertas para os ativos deste tenant.
             </p>
           </div>
-        </div>
-
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {plannedCapabilities.map((capability) => {
-            const Icon = capability.icon;
-
-            return (
-              <div
-                key={capability.title}
-                className="rounded-3xl border border-slate-100 bg-slate-50 p-5"
-              >
-                <div className="mb-4 w-fit rounded-2xl bg-white p-3 shadow-sm">
-                  <Icon className="h-5 w-5 text-slate-800" />
-                </div>
-                <h4 className="font-bold text-slate-900">
-                  {capability.title}
-                </h4>
-                <p className="mt-2 text-sm leading-6 text-slate-500">
-                  {capability.description}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-6 flex items-center gap-3">
-          <div className="rounded-2xl bg-slate-100 p-3">
-            <FileWarning className="h-6 w-6 text-slate-800" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-slate-900">
-              Exemplo de visão detalhada
-            </h3>
-            <p className="text-sm text-slate-500">
-              Estrutura prevista para consulta e priorização das
-              vulnerabilidades detectadas.
-            </p>
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded-2xl border border-slate-200">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-slate-500">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Severidade</th>
-                <th className="px-4 py-3 font-semibold">Ativo afetado</th>
-                <th className="px-4 py-3 font-semibold">Pacote</th>
-                <th className="px-4 py-3 font-semibold">CVE</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-slate-100 bg-white">
-              {exampleRows.map((row) => (
-                <tr key={row.cve}>
-                  <td className="px-4 py-4">
-                    <span
-                      className={[
-                        "rounded-full px-3 py-1 text-xs font-bold",
-                        getSeverityBadgeClass(row.severity),
-                      ].join(" ")}
-                    >
-                      {row.severity}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 font-semibold text-slate-900">
-                    {row.asset}
-                  </td>
-                  <td className="px-4 py-4 text-slate-600">
-                    {row.packageName}
-                  </td>
-                  <td className="px-4 py-4 font-mono text-xs text-slate-600">
-                    {row.cve}
-                  </td>
-                  <td className="px-4 py-4 text-slate-600">{row.status}</td>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1100px] text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-6 py-4 font-bold">Severidade</th>
+                  <th className="px-6 py-4 font-bold">CVE</th>
+                  <th className="px-6 py-4 font-bold">Ativo</th>
+                  <th className="px-6 py-4 font-bold">Pacote</th>
+                  <th className="px-6 py-4 font-bold">Versão</th>
+                  <th className="px-6 py-4 font-bold">Score</th>
+                  <th className="px-6 py-4 font-bold">Última detecção</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+              </thead>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-6 flex items-center gap-3">
-          <div className="rounded-2xl bg-slate-100 p-3">
-            <DatabaseZap className="h-6 w-6 text-slate-800" />
+              <tbody className="divide-y divide-slate-100">
+                {vulnerabilities.map((vulnerability) => (
+                  <tr key={vulnerability.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 align-top">
+                      <span
+                        className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${getSeverityBadgeClass(
+                          vulnerability.severity
+                        )}`}
+                      >
+                        {translateSeverity(vulnerability.severity)}
+                      </span>
+                    </td>
+
+                    <td className="px-6 py-4 align-top">
+                      <div className="font-bold text-slate-950">
+                        {vulnerability.cve}
+                      </div>
+                      <p className="mt-1 line-clamp-2 max-w-md text-xs leading-5 text-slate-500">
+                        {vulnerability.title ?? "Sem descrição disponível."}
+                      </p>
+                    </td>
+
+                    <td className="px-6 py-4 align-top">
+                      <div className="font-semibold text-slate-900">
+                        {vulnerability.assetName}
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        {vulnerability.assetIp ?? "IP não informado"}
+                      </div>
+                      {vulnerability.operatingSystem && (
+                        <div className="mt-1 max-w-xs truncate text-xs text-slate-400">
+                          {vulnerability.operatingSystem}
+                        </div>
+                      )}
+                    </td>
+
+                    <td className="px-6 py-4 align-top">
+                      <div className="font-medium text-slate-900">
+                        {vulnerability.packageName || "—"}
+                      </div>
+                      {vulnerability.condition && (
+                        <div className="mt-1 max-w-xs truncate text-xs text-slate-500">
+                          {vulnerability.condition}
+                        </div>
+                      )}
+                    </td>
+
+                    <td className="px-6 py-4 align-top text-slate-600">
+                      {vulnerability.packageVersion || "—"}
+                    </td>
+
+                    <td className="px-6 py-4 align-top font-semibold text-slate-900">
+                      {vulnerability.score ?? "—"}
+                    </td>
+
+                    <td className="px-6 py-4 align-top text-slate-600">
+                      {formatDate(vulnerability.lastSeenAt)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div>
-            <h3 className="text-lg font-bold text-slate-900">
-              Roadmap técnico
-            </h3>
-            <p className="text-sm text-slate-500">
-              Etapas previstas para ativação do módulo de vulnerabilidades.
-            </p>
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded-2xl border border-slate-200">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-slate-500">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Fase</th>
-                <th className="px-4 py-3 font-semibold">Entrega</th>
-                <th className="px-4 py-3 font-semibold">Descrição</th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-slate-100 bg-white">
-              {roadmapItems.map((item) => (
-                <tr key={item.title}>
-                  <td className="px-4 py-4">
-                    <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
-                      {item.phase}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 font-bold text-slate-900">
-                    {item.title}
-                  </td>
-                  <td className="px-4 py-4 text-slate-600">
-                    {item.description}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="rounded-3xl border border-cyan-100 bg-cyan-50 p-6 text-cyan-950 shadow-sm">
-        <div className="flex items-start gap-3">
-          <ShieldCheck className="mt-1 h-5 w-5 text-cyan-800" />
-          <div>
-            <div className="font-bold">Próxima etapa</div>
-            <p className="mt-1 text-sm leading-6">
-              A ativação real deste módulo dependerá da integração com o SIEM,
-              do vínculo entre agentes de segurança e ativos do portal, e da
-              criação dos snapshots internos de vulnerabilidades.
-            </p>
-          </div>
-        </div>
+        )}
       </section>
     </div>
   );
