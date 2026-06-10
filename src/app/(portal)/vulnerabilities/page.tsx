@@ -2,10 +2,21 @@ import {
   AlertTriangle,
   Bug,
   CheckCircle2,
+  Filter,
+  Search,
   ShieldAlert,
   ShieldCheck,
 } from "lucide-react";
 import { getTenantVulnerabilitiesOverview } from "@/lib/queries/vulnerabilities";
+
+type VulnerabilitiesPageProps = {
+  searchParams: Promise<{
+    severity?: string;
+    status?: string;
+    asset?: string;
+    q?: string;
+  }>;
+};
 
 function formatDate(value: string | null) {
   if (!value) {
@@ -36,6 +47,17 @@ function getSeverityBadgeClass(severity: string | null) {
   }
 }
 
+function getStatusBadgeClass(status: string | null) {
+  switch (status) {
+    case "OPEN":
+      return "bg-red-50 text-red-700 border-red-100";
+    case "RESOLVED":
+      return "bg-emerald-50 text-emerald-700 border-emerald-100";
+    default:
+      return "bg-slate-100 text-slate-700 border-slate-200";
+  }
+}
+
 function translateSeverity(severity: string | null) {
   switch (severity) {
     case "CRITICAL":
@@ -48,6 +70,17 @@ function translateSeverity(severity: string | null) {
       return "Baixa";
     default:
       return "Não classificada";
+  }
+}
+
+function translateStatus(status: string | null) {
+  switch (status) {
+    case "OPEN":
+      return "Aberta";
+    case "RESOLVED":
+      return "Resolvida";
+    default:
+      return "Indefinido";
   }
 }
 
@@ -80,32 +113,41 @@ function SummaryCard({
   );
 }
 
-export default async function VulnerabilitiesPage() {
-const { hasTenant, summary, vulnerabilities } =
-  await getTenantVulnerabilitiesOverview();
+export default async function VulnerabilitiesPage({
+  searchParams,
+}: VulnerabilitiesPageProps) {
+  const params = await searchParams;
 
-if (!hasTenant) {
-  return (
-    <div className="space-y-8">
-      <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-700">
-          <ShieldAlert className="h-4 w-4" />
-          Tenant não associado
-        </div>
+  const { hasTenant, summary, vulnerabilities, assets } =
+    await getTenantVulnerabilitiesOverview({
+      severity: params.severity,
+      status: params.status,
+      asset: params.asset,
+      q: params.q,
+    });
 
-        <h1 className="text-2xl font-bold tracking-tight text-slate-950">
-          Vulnerabilidades indisponíveis para este usuário
-        </h1>
+  if (!hasTenant) {
+    return (
+      <div className="space-y-8">
+        <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-700">
+            <ShieldAlert className="h-4 w-4" />
+            Tenant não associado
+          </div>
 
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
-          Este usuário não está associado a um tenant específico. Para visualizar
-          vulnerabilidades, acesse com um usuário do tenant cliente ou associe
-          este usuário a um tenant.
-        </p>
-      </section>
-    </div>
-  );
-}
+          <h1 className="text-2xl font-bold tracking-tight text-slate-950">
+            Vulnerabilidades indisponíveis para este usuário
+          </h1>
+
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
+            Este usuário não está associado a um tenant específico. Para
+            visualizar vulnerabilidades, acesse com um usuário do tenant cliente
+            ou associe este usuário a um tenant.
+          </p>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -173,14 +215,117 @@ if (!hasTenant) {
         />
       </section>
 
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-5 flex items-center gap-2">
+          <div className="rounded-2xl bg-slate-100 p-3">
+            <Filter className="h-5 w-5 text-slate-800" />
+          </div>
+
+          <div>
+            <h2 className="text-lg font-bold text-slate-950">Filtros</h2>
+            <p className="text-sm text-slate-500">
+              Refine a visão por severidade, status, ativo ou termo de busca.
+            </p>
+          </div>
+        </div>
+
+        <form className="grid gap-4 lg:grid-cols-5">
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Severidade
+            </label>
+            <select
+              name="severity"
+              defaultValue={params.severity ?? "ALL"}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900"
+            >
+              <option value="ALL">Todas</option>
+              <option value="CRITICAL">Crítica</option>
+              <option value="HIGH">Alta</option>
+              <option value="MEDIUM">Média</option>
+              <option value="LOW">Baixa</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Status
+            </label>
+            <select
+              name="status"
+              defaultValue={params.status ?? "OPEN"}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900"
+            >
+              <option value="OPEN">Abertas</option>
+              <option value="RESOLVED">Resolvidas</option>
+              <option value="ALL">Todas</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Ativo
+            </label>
+            <select
+              name="asset"
+              defaultValue={params.asset ?? "ALL"}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900"
+            >
+              <option value="ALL">Todos</option>
+              {assets.map((asset) => (
+                <option
+                  key={asset.wazuhAgentId}
+                  value={asset.wazuhAgentId}
+                >
+                  {asset.name}
+                  {asset.ip ? ` — ${asset.ip}` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="lg:col-span-2">
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Busca
+            </label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
+              <input
+                name="q"
+                type="search"
+                defaultValue={params.q ?? ""}
+                placeholder="Buscar por CVE, pacote, versão ou descrição"
+                className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-end gap-3 lg:col-span-5">
+            <button
+              type="submit"
+              className="inline-flex items-center justify-center rounded-2xl bg-[#071426] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#0f2544]"
+            >
+              Aplicar filtros
+            </button>
+
+            <a
+              href="/vulnerabilities"
+              className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+            >
+              Limpar
+            </a>
+          </div>
+        </form>
+      </section>
+
       <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 p-6">
           <h2 className="text-lg font-bold text-slate-950">
-            Vulnerabilidades abertas
+            Vulnerabilidades encontradas
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Listagem limitada aos 200 itens abertos mais relevantes, ordenados
-            por severidade e score.
+            Listagem limitada aos 300 itens mais relevantes conforme os filtros
+            aplicados.
           </p>
         </div>
 
@@ -191,19 +336,19 @@ if (!hasTenant) {
             </div>
 
             <h3 className="text-base font-bold text-slate-950">
-              Nenhuma vulnerabilidade aberta encontrada
+              Nenhuma vulnerabilidade encontrada
             </h3>
 
             <p className="mt-2 text-sm text-slate-500">
-              O último ciclo de sincronização não encontrou vulnerabilidades
-              abertas para os ativos deste tenant.
+              Não há vulnerabilidades para os filtros selecionados.
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1100px] text-left text-sm">
+            <table className="w-full min-w-[1200px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
+                  <th className="px-6 py-4 font-bold">Status</th>
                   <th className="px-6 py-4 font-bold">Severidade</th>
                   <th className="px-6 py-4 font-bold">CVE</th>
                   <th className="px-6 py-4 font-bold">Ativo</th>
@@ -217,6 +362,16 @@ if (!hasTenant) {
               <tbody className="divide-y divide-slate-100">
                 {vulnerabilities.map((vulnerability) => (
                   <tr key={vulnerability.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 align-top">
+                      <span
+                        className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${getStatusBadgeClass(
+                          vulnerability.status
+                        )}`}
+                      >
+                        {translateStatus(vulnerability.status)}
+                      </span>
+                    </td>
+
                     <td className="px-6 py-4 align-top">
                       <span
                         className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${getSeverityBadgeClass(
