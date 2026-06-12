@@ -174,3 +174,220 @@ export async function resetGlobalAdminUserPasswordAction(
 
   revalidatePath("/admin/users");
 }
+
+export async function updateTenantUserAction({
+  tenantSlug,
+  userId,
+}: {
+  tenantSlug: string;
+  userId: string;
+}, formData: FormData) {
+  await requirePartsecAdmin();
+
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const role = String(formData.get("role") ?? "").trim();
+
+  if (!name) {
+    throw new Error("Nome é obrigatório.");
+  }
+
+  if (!email) {
+    throw new Error("E-mail é obrigatório.");
+  }
+
+  if (!["ADMIN_TENANT", "VIEWER_TENANT"].includes(role)) {
+    throw new Error("Role inválida para usuário de tenant.");
+  }
+
+  const tenant = await prisma.tenant.findUnique({
+    where: {
+      slug: tenantSlug,
+    },
+    select: {
+      id: true,
+      slug: true,
+    },
+  });
+
+  if (!tenant) {
+    throw new Error("Tenant não encontrado.");
+  }
+
+  const user = await prisma.user.findFirst({
+    where: {
+      id: userId,
+      tenantId: tenant.id,
+    },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+    },
+  });
+
+  if (!user) {
+    throw new Error("Usuário do tenant não encontrado.");
+  }
+
+  if (user.role === UserRole.PARTSEC_ADMIN) {
+    throw new Error("Esta ação não edita administradores globais.");
+  }
+
+  const existingUserWithEmail = await prisma.user.findUnique({
+    where: {
+      email,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (existingUserWithEmail && existingUserWithEmail.id !== userId) {
+    throw new Error("Já existe outro usuário com este e-mail.");
+  }
+
+  await prisma.user.update({
+    where: {
+      id: userId,
+    },
+    data: {
+      name,
+      email,
+      role: role as UserRole,
+    },
+  });
+
+  revalidatePath(`/admin/tenants/${tenant.slug}`);
+  revalidatePath(`/admin/tenants/${tenant.slug}/users/${userId}/edit`);
+  redirect(`/admin/tenants/${tenant.slug}`);
+}
+
+export async function toggleTenantUserStatusAction({
+  tenantSlug,
+  userId,
+}: {
+  tenantSlug: string;
+  userId: string;
+}) {
+  await requirePartsecAdmin();
+
+  const tenant = await prisma.tenant.findUnique({
+    where: {
+      slug: tenantSlug,
+    },
+    select: {
+      id: true,
+      slug: true,
+    },
+  });
+
+  if (!tenant) {
+    throw new Error("Tenant não encontrado.");
+  }
+
+  const user = await prisma.user.findFirst({
+    where: {
+      id: userId,
+      tenantId: tenant.id,
+    },
+    select: {
+      id: true,
+      role: true,
+      isActive: true,
+    },
+  });
+
+  if (!user) {
+    throw new Error("Usuário do tenant não encontrado.");
+  }
+
+  if (user.role === UserRole.PARTSEC_ADMIN) {
+    throw new Error("Esta ação não altera administradores globais.");
+  }
+
+  await prisma.user.update({
+    where: {
+      id: userId,
+    },
+    data: {
+      isActive: !user.isActive,
+    },
+  });
+
+  revalidatePath(`/admin/tenants/${tenant.slug}`);
+  revalidatePath(`/admin/tenants/${tenant.slug}/users/${userId}/edit`);
+}
+
+export async function resetTenantUserPasswordAction({
+  tenantSlug,
+  userId,
+}: {
+  tenantSlug: string;
+  userId: string;
+}, formData: FormData) {
+  await requirePartsecAdmin();
+
+  const password = String(formData.get("password") ?? "").trim();
+  const confirmPassword = String(formData.get("confirmPassword") ?? "").trim();
+
+  if (!password) {
+    throw new Error("Nova senha é obrigatória.");
+  }
+
+  if (password.length < 10) {
+    throw new Error("A senha deve ter pelo menos 10 caracteres.");
+  }
+
+  if (password !== confirmPassword) {
+    throw new Error("A confirmação de senha não confere.");
+  }
+
+  const tenant = await prisma.tenant.findUnique({
+    where: {
+      slug: tenantSlug,
+    },
+    select: {
+      id: true,
+      slug: true,
+    },
+  });
+
+  if (!tenant) {
+    throw new Error("Tenant não encontrado.");
+  }
+
+  const user = await prisma.user.findFirst({
+    where: {
+      id: userId,
+      tenantId: tenant.id,
+    },
+    select: {
+      id: true,
+      role: true,
+    },
+  });
+
+  if (!user) {
+    throw new Error("Usuário do tenant não encontrado.");
+  }
+
+  if (user.role === UserRole.PARTSEC_ADMIN) {
+    throw new Error("Esta ação não redefine senha de administradores globais.");
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  await prisma.user.update({
+    where: {
+      id: userId,
+    },
+    data: {
+      passwordHash,
+      isActive: true,
+    },
+  });
+
+  revalidatePath(`/admin/tenants/${tenant.slug}`);
+  revalidatePath(`/admin/tenants/${tenant.slug}/users/${userId}/edit`);
+}

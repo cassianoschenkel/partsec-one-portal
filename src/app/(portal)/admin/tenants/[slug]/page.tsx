@@ -265,12 +265,15 @@ type AdminTenantDetailPageProps = {
               <tbody className="divide-y divide-slate-100 bg-white">
                 {tenant.users.map((user) => (
                   <tr key={user.id}>
-                    <td className="px-4 py-3 font-medium text-slate-900">
-                      {user.name}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {user.email}
-                    </td>
+				<Link
+				  href={`/admin/tenants/${tenant.slug}/users/${user.id}/edit`}
+				  className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+				>
+				  {user.name}
+				</Link>
+                <td className="px-4 py-3 text-slate-600">
+                  {user.email}
+                </td>
                     <td className="px-4 py-3 text-slate-600">{user.role}</td>
                     <td className="px-4 py-3">
                       <span
