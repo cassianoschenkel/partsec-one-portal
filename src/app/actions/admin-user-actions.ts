@@ -7,6 +7,30 @@ import { auth } from "@/../auth";
 import { prisma } from "@/lib/prisma";
 import { UserRole } from "@/generated/prisma/client";
 
+function redirectWithCreateUserError({
+  message,
+  name,
+  email,
+}: {
+  message: string;
+  name?: string;
+  email?: string;
+}) {
+  const params = new URLSearchParams();
+
+  params.set("error", message);
+
+  if (name) {
+    params.set("name", name);
+  }
+
+  if (email) {
+    params.set("email", email);
+  }
+
+  redirect(`/admin/users/new?${params.toString()}`);
+}
+
 async function requirePartsecAdmin() {
   const session = await auth();
 
@@ -41,25 +65,45 @@ export async function createGlobalAdminUserAction(formData: FormData) {
   const password = String(formData.get("password") ?? "").trim();
   const confirmPassword = String(formData.get("confirmPassword") ?? "").trim();
 
-  if (!name) {
-    throw new Error("Nome é obrigatório.");
-  }
+if (!name) {
+  redirectWithCreateUserError({
+    message: "Nome é obrigatório.",
+    name,
+    email,
+  });
+}
 
-  if (!email) {
-    throw new Error("E-mail é obrigatório.");
-  }
+if (!email) {
+  redirectWithCreateUserError({
+    message: "E-mail é obrigatório.",
+    name,
+    email,
+  });
+}
 
-  if (!password) {
-    throw new Error("Senha temporária é obrigatória.");
-  }
+if (!password) {
+  redirectWithCreateUserError({
+    message: "Senha temporária é obrigatória.",
+    name,
+    email,
+  });
+}
 
-  if (password.length < 10) {
-    throw new Error("A senha deve ter pelo menos 10 caracteres.");
-  }
+if (password.length < 10) {
+  redirectWithCreateUserError({
+    message: "A senha deve ter pelo menos 10 caracteres.",
+    name,
+    email,
+  });
+}
 
-  if (password !== confirmPassword) {
-    throw new Error("A confirmação de senha não confere.");
-  }
+if (password !== confirmPassword) {
+  redirectWithCreateUserError({
+    message: "A confirmação de senha não confere.",
+    name,
+    email,
+  });
+}
 
   const existingUser = await prisma.user.findUnique({
     where: {
@@ -70,9 +114,13 @@ export async function createGlobalAdminUserAction(formData: FormData) {
     },
   });
 
-  if (existingUser) {
-    throw new Error("Já existe um usuário com este e-mail.");
-  }
+if (existingUser) {
+  redirectWithCreateUserError({
+    message: "Este e-mail já está em uso por outro usuário.",
+    name,
+    email,
+  });
+}
 
   const passwordHash = await bcrypt.hash(password, 12);
 
@@ -390,4 +438,34 @@ export async function resetTenantUserPasswordAction({
 
   revalidatePath(`/admin/tenants/${tenant.slug}`);
   revalidatePath(`/admin/tenants/${tenant.slug}/users/${userId}/edit`);
+}
+export async function deleteGlobalAdminUserAction(userId: string) {
+  const currentUser = await requirePartsecAdmin();
+
+  if (currentUser.id === userId) {
+    throw new Error("Você não pode excluir o seu próprio usuário.");
+  }
+
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      id: true,
+      role: true,
+      email: true,
+    },
+  });
+
+  if (!user || user.role !== UserRole.PARTSEC_ADMIN) {
+    throw new Error("Usuário administrador global não encontrado.");
+  }
+
+  await prisma.user.delete({
+    where: {
+      id: userId,
+    },
+  });
+
+  revalidatePath("/admin/users");
 }

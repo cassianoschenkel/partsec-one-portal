@@ -5,10 +5,12 @@ import {
   ShieldCheck,
   UserCog,
   UserX,
+  Trash2,
 } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { getAdminGlobalUsers } from "@/lib/queries/admin-users";
 import {
+  deleteGlobalAdminUserAction,
   resetGlobalAdminUserPasswordAction,
   toggleGlobalAdminUserStatusAction,
 } from "@/app/actions/admin-user-actions";
@@ -79,6 +81,9 @@ export default async function AdminUsersPage() {
 
               const resetPassword =
                 resetGlobalAdminUserPasswordAction.bind(null, user.id);
+				
+			  const deleteUser =
+				deleteGlobalAdminUserAction.bind(null, user.id);
 
               return (
                 <div
@@ -137,6 +142,15 @@ export default async function AdminUsersPage() {
                         )}
                       </button>
                     </form>
+					<form action={deleteUser} className="mt-3">
+					  <button
+						type="submit"
+						className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-white px-4 py-3 text-sm font-bold text-red-700 transition hover:bg-red-50"
+					  >
+						<Trash2 className="h-4 w-4" />
+						Excluir usuário
+					  </button>
+					</form>
                   </div>
 
                   <form

@@ -2,7 +2,18 @@ import { KeyRound, Save, UserCog } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { createGlobalAdminUserAction } from "@/app/actions/admin-user-actions";
 
-export default function NewAdminUserPage() {
+type NewAdminUserPageProps = {
+  searchParams: Promise<{
+    error?: string;
+    name?: string;
+    email?: string;
+  }>;
+};
+
+export default async function NewAdminUserPage({
+  searchParams,
+}: NewAdminUserPageProps) {
+  const params = await searchParams;
   return (
     <div className="space-y-8">
       <AdminPageHeader
@@ -13,7 +24,11 @@ export default function NewAdminUserPage() {
         title="Criar administrador global"
         description="Crie um novo usuário com permissão administrativa global no Partsec One Portal."
       />
-
+        {params.error && (
+		  <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+			{params.error}
+		  </div>
+		)}
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <form action={createGlobalAdminUserAction} className="max-w-2xl">
           <div className="grid gap-5">
@@ -25,6 +40,7 @@ export default function NewAdminUserPage() {
                 name="name"
                 type="text"
                 required
+				defaultValue={params.name ?? ""}
                 placeholder="Ex: Administrador Partsec"
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900"
               />
@@ -38,6 +54,7 @@ export default function NewAdminUserPage() {
                 name="email"
                 type="email"
                 required
+				defaultValue={params.email ?? ""}
                 placeholder="admin@partsec.com.br"
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900"
               />
