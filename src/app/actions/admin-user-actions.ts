@@ -31,6 +31,42 @@ function redirectWithCreateUserError({
   redirect(`/admin/users/new?${params.toString()}`);
 }
 
+function redirectWithTenantUserEditError({
+  tenantSlug,
+  userId,
+  message,
+  name,
+  email,
+  role,
+}: {
+  tenantSlug: string;
+  userId: string;
+  message: string;
+  name?: string;
+  email?: string;
+  role?: string;
+}) {
+  const params = new URLSearchParams();
+
+  params.set("error", message);
+
+  if (name) {
+    params.set("name", name);
+  }
+
+  if (email) {
+    params.set("email", email);
+  }
+
+  if (role) {
+    params.set("role", role);
+  }
+
+  redirect(
+    `/admin/tenants/${tenantSlug}/users/${userId}/edit?${params.toString()}`
+  );
+}
+
 async function requirePartsecAdmin() {
   const session = await auth();
 
@@ -236,17 +272,38 @@ export async function updateTenantUserAction({
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const role = String(formData.get("role") ?? "").trim();
 
-  if (!name) {
-    throw new Error("Nome é obrigatório.");
-  }
+if (!name) {
+  redirectWithTenantUserEditError({
+    tenantSlug,
+    userId,
+    message: "Nome é obrigatório.",
+    name,
+    email,
+    role,
+  });
+}
 
-  if (!email) {
-    throw new Error("E-mail é obrigatório.");
-  }
+if (!email) {
+  redirectWithTenantUserEditError({
+    tenantSlug,
+    userId,
+    message: "E-mail é obrigatório.",
+    name,
+    email,
+    role,
+  });
+}
 
-  if (!["ADMIN_TENANT", "VIEWER_TENANT"].includes(role)) {
-    throw new Error("Role inválida para usuário de tenant.");
-  }
+if (!["ADMIN_TENANT", "VIEWER_TENANT"].includes(role)) {
+  redirectWithTenantUserEditError({
+    tenantSlug,
+    userId,
+    message: "Perfil inválido para usuário de tenant.",
+    name,
+    email,
+    role,
+  });
+}
 
   const tenant = await prisma.tenant.findUnique({
     where: {
@@ -291,9 +348,16 @@ export async function updateTenantUserAction({
     },
   });
 
-  if (existingUserWithEmail && existingUserWithEmail.id !== userId) {
-    throw new Error("Já existe outro usuário com este e-mail.");
-  }
+if (existingUserWithEmail && existingUserWithEmail.id !== userId) {
+  redirectWithTenantUserEditError({
+    tenantSlug,
+    userId,
+    message: "Este e-mail já está em uso por outro usuário.",
+    name,
+    email,
+    role,
+  });
+}
 
   await prisma.user.update({
     where: {
@@ -468,4 +532,56 @@ export async function deleteGlobalAdminUserAction(userId: string) {
   });
 
   revalidatePath("/admin/users");
+}
+
+export async function deleteTenantUserAction({
+  tenantSlug,
+  userId,
+}: {
+  tenantSlug: string;
+  userId: string;
+}) {
+  await requirePartsecAdmin();
+
+  const tenant = await prisma.tenant.findUnique({
+    where: {
+      slug: tenantSlug,
+    },
+    select: {
+      id: true,
+      slug: true,
+    },
+  });
+
+  if (!tenant) {
+    throw new Error("Tenant não encontrado.");
+  }
+
+  const user = await prisma.user.findFirst({
+    where: {
+      id: userId,
+      tenantId: tenant.id,
+    },
+    select: {
+      id: true,
+      role: true,
+    },
+  });
+
+  if (!user) {
+    throw new Error("Usuário do tenant não encontrado.");
+  }
+
+  if (user.role === UserRole.PARTSEC_ADMIN) {
+    throw new Error("Esta ação não exclui administradores globais.");
+  }
+
+  await prisma.user.delete({
+    where: {
+      id: userId,
+    },
+  });
+
+  revalidatePath(`/admin/tenants/${tenant.slug}`);
+  redirect(`/admin/tenants/${tenant.slug}`);
 }

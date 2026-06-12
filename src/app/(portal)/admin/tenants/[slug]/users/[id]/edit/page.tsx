@@ -5,10 +5,12 @@ import {
   ShieldCheck,
   UserCog,
   UserX,
+  Trash2,
 } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { getAdminTenantUserForEdit } from "@/lib/queries/admin-tenant-users";
 import {
+  deleteTenantUserAction,
   resetTenantUserPasswordAction,
   toggleTenantUserStatusAction,
   updateTenantUserAction,
@@ -18,6 +20,12 @@ type EditTenantUserPageProps = {
   params: Promise<{
     slug: string;
     id: string;
+  }>;
+  searchParams: Promise<{
+    error?: string;
+    name?: string;
+    email?: string;
+    role?: string;
   }>;
 };
 
@@ -33,8 +41,10 @@ function formatDate(value: string) {
 
 export default async function EditTenantUserPage({
   params,
+  searchParams,
 }: EditTenantUserPageProps) {
   const { slug, id } = await params;
+  const query = await searchParams;
 
   const data = await getAdminTenantUserForEdit({
     tenantSlug: slug,
@@ -61,6 +71,11 @@ export default async function EditTenantUserPage({
     tenantSlug: tenant.slug,
     userId: user.id,
   });
+  
+  const deleteUser = deleteTenantUserAction.bind(null, {
+  tenantSlug: tenant.slug,
+  userId: user.id,
+ });
 
   return (
     <div className="space-y-8">
@@ -94,6 +109,11 @@ export default async function EditTenantUserPage({
               Atualize nome, e-mail e perfil de acesso dentro do tenant.
             </p>
           </div>
+		  {query.error && (
+		  <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+			{query.error}
+		  </div>
+		  )}
 
           <div className="grid gap-5">
             <div>
@@ -104,7 +124,7 @@ export default async function EditTenantUserPage({
                 name="name"
                 type="text"
                 required
-                defaultValue={user.name}
+                defaultValue={query.name ?? user.name}
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900"
               />
             </div>
@@ -117,7 +137,7 @@ export default async function EditTenantUserPage({
                 name="email"
                 type="email"
                 required
-                defaultValue={user.email}
+                defaultValue={query.email ?? user.email}
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900"
               />
             </div>
@@ -128,7 +148,7 @@ export default async function EditTenantUserPage({
               </label>
               <select
                 name="role"
-                defaultValue={user.role}
+                defaultValue={query.role ?? user.role}
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900"
               >
                 <option value="ADMIN_TENANT">Administrador do tenant</option>
@@ -199,6 +219,28 @@ export default async function EditTenantUserPage({
               </button>
             </form>
           </section>
+		  
+		  <section className="rounded-3xl border border-red-200 bg-red-50 p-6 shadow-sm">
+		  <div className="mb-4">
+			<h2 className="text-lg font-bold text-red-800">
+			  Excluir usuário
+			</h2>
+			<p className="mt-1 text-sm leading-6 text-red-700">
+			  Remove definitivamente este usuário do tenant. Esta ação não deve ser
+			  usada para bloqueios temporários; nesse caso, prefira desativar o acesso.
+			</p>
+		  </div>
+
+		  <form action={deleteUser}>
+			<button
+			  type="submit"
+			  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-red-300 bg-white px-5 py-3 text-sm font-bold text-red-700 transition hover:bg-red-100"
+			>
+			  <Trash2 className="h-4 w-4" />
+			  Excluir usuário
+			</button>
+		  </form>
+		  </section>
 
           <form
             action={resetPassword}
