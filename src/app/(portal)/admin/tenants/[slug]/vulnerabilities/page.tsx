@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   AlertTriangle,
   Bug,
@@ -361,9 +362,12 @@ export default async function AdminTenantVulnerabilitiesPage({
                     </td>
 
                     <td className="px-6 py-4 align-top">
-                      <div className="font-bold text-slate-950">
-                        {vulnerability.cve}
-                      </div>
+						<Link
+						  href={`/admin/tenants/${tenant.slug}/vulnerabilities/${vulnerability.id}`}
+						  className="font-bold text-slate-950 underline decoration-slate-300 underline-offset-4 transition hover:text-slate-700"
+						>
+						  {vulnerability.cve}
+						</Link>
                       <p className="mt-1 line-clamp-2 max-w-md text-xs leading-5 text-slate-500">
                         {vulnerability.title ?? "Sem descrição disponível."}
                       </p>
