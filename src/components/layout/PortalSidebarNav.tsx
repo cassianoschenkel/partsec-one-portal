@@ -12,6 +12,7 @@ import {
   Settings,
   Ticket,
   Bug,
+  UserCog, 
 } from "lucide-react";
 
 const menuItems = [
@@ -45,6 +46,11 @@ const menuItems = [
     label: "Relatórios",
     href: "/reports",
     icon: FileText,
+  },
+  {
+  href: "/admin/users",
+  label: "Usuários globais",
+  icon: UserCog,
   },
   {
     label: "Configurações",

@@ -25,6 +25,26 @@ type WazuhApiResponse<T> = {
   message?: string;
 };
 
+type SiemVulnerabilityRaw = {
+  cve?: string;
+  title?: string;
+  severity?: string;
+  score?: number;
+  package?: {
+    name?: string;
+    version?: string;
+    architecture?: string;
+    condition?: string;
+  };
+  package_name?: string;
+  package_version?: string;
+  fixed_version?: string;
+  external_references?: string[];
+  published?: string;
+  updated?: string;
+  detected_at?: string;
+};
+
 function buildApiUrl(baseUrl: string) {
   return baseUrl.replace(/\/$/, "");
 }
@@ -152,6 +172,35 @@ export class SiemClient {
 
 	  return agents;
 	}
+	
+	async getAgentVulnerabilities(agentId: string) {
+	const vulnerabilities: SiemVulnerabilityRaw[] = [];
+	let offset = 0;
+	const limit = 500;
+
+  while (true) {
+    const payload = await this.get<SiemVulnerabilityRaw>(
+      `/vulnerability/${agentId}`,
+      {
+        limit,
+        offset,
+        sort: "-severity",
+      }
+    );
+
+    const items = payload.data?.affected_items ?? [];
+
+    vulnerabilities.push(...items);
+
+    if (items.length < limit) {
+      break;
+    }
+
+    offset += limit;
+  }
+
+  return vulnerabilities;
+}
 }
 
 export async function getSiemClientForTenant(tenantSlug: string) {
