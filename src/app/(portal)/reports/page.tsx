@@ -19,6 +19,7 @@ const reportModels = [
       "Evolução em relação ao período anterior",
       "Recomendações estratégicas",
     ],
+    href: "/reports/executive",
   },
   {
     title: "Relatório Gerencial",
@@ -104,6 +105,7 @@ export default async function ReportsPage() {
               audience={model.audience}
               purpose={model.purpose}
               examples={model.examples}
+              href={"href" in model ? model.href : undefined}
             />
           ))}
         </div>

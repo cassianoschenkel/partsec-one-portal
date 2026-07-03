@@ -1,13 +1,24 @@
 export function InfoCard({
   title,
+  description,
   children,
 }: {
   title: string;
+  description?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="mb-5 text-lg font-bold text-slate-950">{title}</h2>
+      <h2
+        className={`text-lg font-bold text-slate-950 ${
+          description ? "" : "mb-5"
+        }`}
+      >
+        {title}
+      </h2>
+      {description ? (
+        <p className="mb-5 mt-1 text-xs text-slate-500">{description}</p>
+      ) : null}
       {children}
     </section>
   );
