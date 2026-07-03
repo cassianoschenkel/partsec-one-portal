@@ -1,4 +1,6 @@
+import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 export function ReportModelCard({
   icon: Icon,
@@ -6,12 +8,14 @@ export function ReportModelCard({
   audience,
   purpose,
   examples,
+  href,
 }: {
   icon: LucideIcon;
   title: string;
   audience: string;
   purpose: string;
   examples: string[];
+  href?: string;
 }) {
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -49,6 +53,16 @@ export function ReportModelCard({
           ))}
         </ul>
       </div>
+
+      {href && (
+        <Link
+          href={href}
+          className="mt-5 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
+        >
+          Acessar relatório
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      )}
     </div>
   );
 }
