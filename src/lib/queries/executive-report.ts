@@ -14,10 +14,14 @@ const severityOrder: Record<string, number> = {
 // tenant's open vulnerability volume regularly approaches it.
 const OPEN_VULNERABILITIES_RANKING_LIMIT = 5000;
 
+export type ExecutiveRiskLevel = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+
 export type ExecutiveReportData = {
   hasTenant: boolean;
   tenantName: string | null;
   hasVulnerabilityData: boolean;
+  riskLevel: ExecutiveRiskLevel;
+  recommendations: string[];
   siem: {
     status: string | null;
     lastSyncedAt: string | null;
@@ -57,6 +61,58 @@ export type ExecutiveReportData = {
   };
 };
 
+function computeRiskLevel(vulnerabilities: {
+  open: number;
+  critical: number;
+  high: number;
+}): ExecutiveRiskLevel {
+  if (vulnerabilities.critical > 0) {
+    return "CRITICAL";
+  }
+
+  if (vulnerabilities.high > 0) {
+    return "HIGH";
+  }
+
+  if (vulnerabilities.open > 0) {
+    return "MEDIUM";
+  }
+
+  return "LOW";
+}
+
+function computeRecommendations(vulnerabilities: {
+  open: number;
+  critical: number;
+  high: number;
+}): string[] {
+  const recommendations: string[] = [];
+
+  if (vulnerabilities.critical > 0) {
+    recommendations.push(
+      "Priorizar a remediação das vulnerabilidades críticas em aberto."
+    );
+  }
+
+  if (vulnerabilities.high > 0) {
+    recommendations.push(
+      "Planejar a remediação das vulnerabilidades de severidade alta."
+    );
+  }
+
+  if (vulnerabilities.open > 0) {
+    recommendations.push(
+      "Revisar os ativos afetados e as vulnerabilidades recorrentes."
+    );
+  }
+
+  recommendations.push(
+    "Manter o histórico de remediações e realizar revisões periódicas."
+  );
+
+  return recommendations;
+}
+
 function formatNullableDate(date: Date | null | undefined) {
   if (!date) {
     return null;
@@ -89,6 +145,8 @@ function emptyExecutiveReport(): ExecutiveReportData {
     hasTenant: false,
     tenantName: null,
     hasVulnerabilityData: false,
+    riskLevel: computeRiskLevel({ open: 0, critical: 0, high: 0 }),
+    recommendations: computeRecommendations({ open: 0, critical: 0, high: 0 }),
     siem: {
       status: null,
       lastSyncedAt: null,
@@ -315,6 +373,16 @@ export async function getTenantExecutiveReport(): Promise<ExecutiveReportData> {
     hasTenant: true,
     tenantName: tenant?.name ?? null,
     hasVulnerabilityData: open + resolved > 0,
+    riskLevel: computeRiskLevel({
+      open,
+      critical: severityCounts.critical,
+      high: severityCounts.high,
+    }),
+    recommendations: computeRecommendations({
+      open,
+      critical: severityCounts.critical,
+      high: severityCounts.high,
+    }),
     siem: {
       status: wazuhIntegration?.status ?? null,
       lastSyncedAt: formatNullableDate(

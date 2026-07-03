@@ -13,9 +13,15 @@ export function TopVulnerabilitiesRanking({
     assetName: string;
   }>;
 }) {
+  const description =
+    "Ranking por CVE. Não representa um ranking de pacotes vulneráveis.";
+
   if (vulnerabilities.length === 0) {
     return (
-      <InfoCard title="Vulnerabilidades abertas mais críticas">
+      <InfoCard
+        title="Vulnerabilidades abertas mais críticas"
+        description={description}
+      >
         <p className="text-sm text-slate-500">
           Nenhuma vulnerabilidade aberta encontrada no período acompanhado.
         </p>
@@ -24,7 +30,10 @@ export function TopVulnerabilitiesRanking({
   }
 
   return (
-    <InfoCard title="Vulnerabilidades abertas mais críticas">
+    <InfoCard
+      title="Vulnerabilidades abertas mais críticas"
+      description={description}
+    >
       <ol className="space-y-3">
         {vulnerabilities.map((vulnerability, index) => (
           <li
