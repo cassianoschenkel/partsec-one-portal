@@ -3,9 +3,11 @@ import { formatDate } from "@/components/vulnerabilities/vulnerability-format";
 export function PrintHeader({
   tenantName,
   lastSyncedAt,
+  generatedAt,
 }: {
   tenantName: string | null;
   lastSyncedAt: string | null;
+  generatedAt: string;
 }) {
   return (
     <div className="flex items-center justify-between gap-4 border-b border-slate-200 pb-6">
@@ -18,11 +20,16 @@ export function PrintHeader({
         </h1>
       </div>
 
-      <p className="shrink-0 text-xs font-medium text-slate-500">
-        {lastSyncedAt
-          ? `Última sincronização disponível: ${formatDate(lastSyncedAt)}`
-          : "Visão atual"}
-      </p>
+      <div className="shrink-0 text-right text-xs font-medium text-slate-500">
+        <p>
+          {lastSyncedAt
+            ? `Última sincronização disponível: ${formatDate(lastSyncedAt)}`
+            : "Visão atual"}
+        </p>
+        <p className="mt-1">
+          Relatório gerado em: {formatDate(generatedAt)}
+        </p>
+      </div>
     </div>
   );
 }

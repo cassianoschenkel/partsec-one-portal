@@ -11,7 +11,10 @@ import { RiskInterpretation } from "@/components/reports/executive/RiskInterpret
 import { Recommendations } from "@/components/reports/executive/Recommendations";
 import { PrintHeader } from "@/components/reports/print/PrintHeader";
 import { PrintActions } from "@/components/reports/print/PrintActions";
+import { PrintFooter } from "@/components/reports/print/PrintFooter";
 import { ExecutiveSummary } from "@/components/reports/print/ExecutiveSummary";
+import { AnalysisScope } from "@/components/reports/executive/AnalysisScope";
+import { AnalysisLimitations } from "@/components/reports/executive/AnalysisLimitations";
 
 export default async function ExecutiveReportPrintPage() {
   const session = await auth();
@@ -25,6 +28,7 @@ export default async function ExecutiveReportPrintPage() {
   }
 
   const report = await getTenantExecutiveReport();
+  const generatedAt = new Date().toISOString();
 
   if (!report.hasTenant) {
     return (
@@ -45,6 +49,7 @@ export default async function ExecutiveReportPrintPage() {
       <PrintHeader
         tenantName={report.tenantName}
         lastSyncedAt={report.siem.lastSyncedAt}
+        generatedAt={generatedAt}
       />
 
       <ExecutiveSummary
@@ -55,6 +60,8 @@ export default async function ExecutiveReportPrintPage() {
         agents={report.agents}
         assets={report.assets}
       />
+
+      <AnalysisScope />
 
       <section>
         <h2 className="mb-4 text-lg font-bold text-slate-950">
@@ -95,6 +102,10 @@ export default async function ExecutiveReportPrintPage() {
       />
 
       <Recommendations recommendations={report.recommendations} />
+
+      <AnalysisLimitations />
+
+      <PrintFooter generatedAt={generatedAt} />
     </div>
   );
 }

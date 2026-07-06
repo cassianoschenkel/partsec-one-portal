@@ -23,7 +23,7 @@ export function TopVulnerabilitiesRanking({
         description={description}
       >
         <p className="text-sm text-slate-500">
-          Nenhuma vulnerabilidade aberta encontrada no período acompanhado.
+          Nenhuma vulnerabilidade aberta encontrada na base atual.
         </p>
       </InfoCard>
     );
