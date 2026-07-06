@@ -73,7 +73,7 @@ export function ExecutiveOverviewCards({
         icon={ShieldAlert}
         label="Vulnerabilidades"
         value={`${data.vulnerabilities.open}`}
-        description={`${data.vulnerabilities.resolved} resolvidas no período acompanhado.`}
+        description={`${data.vulnerabilities.resolved} resolvidas na base atual.`}
       />
 
       <OverviewCard

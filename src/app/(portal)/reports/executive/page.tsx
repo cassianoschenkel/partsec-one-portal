@@ -12,6 +12,8 @@ import { TopAssetsRanking } from "@/components/reports/executive/TopAssetsRankin
 import { TopVulnerabilitiesRanking } from "@/components/reports/executive/TopVulnerabilitiesRanking";
 import { RiskInterpretation } from "@/components/reports/executive/RiskInterpretation";
 import { Recommendations } from "@/components/reports/executive/Recommendations";
+import { AnalysisScope } from "@/components/reports/executive/AnalysisScope";
+import { AnalysisLimitations } from "@/components/reports/executive/AnalysisLimitations";
 
 export default async function ExecutiveReportPage() {
   const session = await auth();
@@ -25,6 +27,7 @@ export default async function ExecutiveReportPage() {
   }
 
   const report = await getTenantExecutiveReport();
+  const generatedAt = new Date().toISOString();
 
   if (!report.hasTenant) {
     return (
@@ -75,15 +78,23 @@ export default async function ExecutiveReportPage() {
             ativos monitorados.
           </p>
 
-          <p className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium text-slate-300">
-            {report.siem.lastSyncedAt
-              ? `Última sincronização disponível: ${formatDate(
-                  report.siem.lastSyncedAt
-                )}`
-              : "Visão atual"}
-          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium text-slate-300">
+              {report.siem.lastSyncedAt
+                ? `Última sincronização disponível: ${formatDate(
+                    report.siem.lastSyncedAt
+                  )}`
+                : "Visão atual"}
+            </p>
+
+            <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium text-slate-300">
+              {`Relatório gerado em: ${formatDate(generatedAt)}`}
+            </p>
+          </div>
         </div>
       </section>
+
+      <AnalysisScope />
 
       <ExecutiveOverviewCards data={report} />
 
@@ -118,6 +129,8 @@ export default async function ExecutiveReportPage() {
       )}
 
       <Recommendations recommendations={report.recommendations} />
+
+      <AnalysisLimitations />
     </div>
   );
 }

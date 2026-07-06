@@ -26,7 +26,7 @@ export function ExecutiveSummary({
         de {agents.total} agentes de segurança ativos e {assets.active} de{" "}
         {assets.total} ativos monitorados em operação.{" "}
         {hasVulnerabilityData
-          ? `Há ${vulnerabilities.open} vulnerabilidade(s) em aberto e ${vulnerabilities.resolved} resolvida(s) no período acompanhado.`
+          ? `Há ${vulnerabilities.open} vulnerabilidade(s) em aberto e ${vulnerabilities.resolved} resolvida(s) na última sincronização disponível.`
           : "Ainda não há dados de vulnerabilidades disponíveis para este tenant."}
       </p>
     </InfoCard>
