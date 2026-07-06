@@ -22,8 +22,8 @@ import { PortalSidebarNav } from "@/components/layout/PortalSidebarNav";
 	  userRole,
 	}: PortalLayoutProps) {
   return (
-    <div className="min-h-screen bg-slate-100">
-      <aside className="fixed left-0 top-0 z-20 flex h-screen w-72 flex-col bg-[#071426] text-white">
+    <div className="min-h-screen bg-slate-100 print:bg-white">
+      <aside className="fixed left-0 top-0 z-20 flex h-screen w-72 flex-col bg-[#071426] text-white print:hidden">
         <div className="border-b border-white/10 px-6 py-6">
           <div className="flex flex-col gap-4">
             <div className="rounded-2xl bg-white px-4 py-4">
@@ -58,8 +58,8 @@ import { PortalSidebarNav } from "@/components/layout/PortalSidebarNav";
         </div>
       </aside>
 
-      <main className="ml-72 min-h-screen">
-        <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-8 py-5 backdrop-blur">
+      <main className="ml-72 min-h-screen print:ml-0">
+        <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-8 py-5 backdrop-blur print:hidden">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-medium text-slate-500">Cliente</div>
