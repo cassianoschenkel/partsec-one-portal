@@ -162,20 +162,26 @@ export async function syncTenantSiemVulnerabilities({
       });
     }
 
-    await prisma.siemVulnerabilitySnapshot.updateMany({
-      where: {
-        tenantId,
-        status: "OPEN",
-        lastSeenAt: {
-          lt: syncedAt,
+    let resolvedCount = 0;
+
+    if (agentIds.length > 0) {
+      const reconciliation = await prisma.siemVulnerabilitySnapshot.updateMany({
+        where: {
+          tenantId,
+          status: "OPEN",
+          lastSeenAt: {
+            lt: syncedAt,
+          },
         },
-      },
-      data: {
-        status: "RESOLVED",
-        resolvedAt: syncedAt,
-        syncedAt,
-      },
-    });
+        data: {
+          status: "RESOLVED",
+          resolvedAt: syncedAt,
+          syncedAt,
+        },
+      });
+
+      resolvedCount = reconciliation.count;
+    }
 
     const durationMs = Date.now() - startTime;
 
@@ -187,7 +193,7 @@ export async function syncTenantSiemVulnerabilities({
         status: "SUCCESS",
         message: `Sincronização de vulnerabilidades SIEM concluída. Indexer: ${
           integration.externalOrgId ?? "não configurado"
-        }. Agentes: ${agents.length}. Vulnerabilidades: ${hits.length}.`,
+        }. Agentes: ${agents.length}. Vulnerabilidades: ${hits.length}. Resolvidas nesta sincronização: ${resolvedCount}.`,
         finishedAt: new Date(),
         durationMs,
       },
@@ -198,6 +204,7 @@ export async function syncTenantSiemVulnerabilities({
       tenantSlug,
       agents: agents.length,
       vulnerabilities: hits.length,
+      resolvedCount,
       durationMs,
     };
   } catch (error) {

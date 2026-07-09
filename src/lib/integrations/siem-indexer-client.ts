@@ -175,7 +175,7 @@ export class SiemIndexerClient {
       }
 
       const payload = await this.search({
-        index: "wazuh-states-vulnerabilities*",
+        index: "wazuh-states-vulnerabilities",
         body,
       });
 
