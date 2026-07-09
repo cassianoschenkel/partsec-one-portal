@@ -38,6 +38,18 @@ enum IntegrationStatus {
   ERROR
 }
 
+enum ReportType {
+  EXECUTIVE
+  MANAGERIAL
+  TECHNICAL
+}
+
+enum ReportStatus {
+  DRAFT
+  GENERATED
+  FAILED
+}
+
 model Tenant {
   id       String  @id @default(cuid())
   name     String
@@ -57,6 +69,7 @@ model Tenant {
   integrationSyncLogs        IntegrationSyncLog[]
   siemAgentSnapshots         SiemAgentSnapshot[]
   siemVulnerabilitySnapshots SiemVulnerabilitySnapshot[]
+  reportRuns                 ReportRun[]
 
   @@map("tenants")
 }
@@ -301,4 +314,30 @@ model SiemVulnerabilitySnapshot {
   @@index([severity])
   @@index([status])
   @@map("siem_vulnerability_snapshots")
+}
+
+model ReportRun {
+  id String @id @default(cuid())
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  type   ReportType
+  status ReportStatus
+
+  title       String
+  periodLabel String?
+  generatedAt DateTime @default(now())
+
+  data    Json?
+  fileUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, type])
+  @@index([tenantId, generatedAt])
+  @@index([tenantId, status])
+  @@map("report_runs")
 }
