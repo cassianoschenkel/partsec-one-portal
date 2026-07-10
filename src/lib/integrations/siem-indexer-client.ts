@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { IntegrationType } from "@/generated/prisma/client";
-import { getIntegrationCredential } from "@/lib/integrations/integration-credentials";
+import {
+  getIntegrationCredential,
+  getOptionalCredentialValue,
+} from "@/lib/integrations/integration-credentials";
+
+export const DEFAULT_VULNERABILITIES_INDEX = "wazuh-states-vulnerabilities*";
 
 type SiemIndexerSearchHit = {
   _id: string;
@@ -77,21 +82,25 @@ export class SiemIndexerClient {
   private baseUrl: string;
   private username: string;
   private password: string;
+  private vulnerabilitiesIndex: string;
 
   constructor({
     baseUrl,
     username,
     password,
+    vulnerabilitiesIndex,
   }: {
     baseUrl: string;
     username: string;
     password: string;
+    vulnerabilitiesIndex: string;
   }) {
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
     this.baseUrl = buildApiUrl(baseUrl);
     this.username = username;
     this.password = password;
+    this.vulnerabilitiesIndex = vulnerabilitiesIndex;
   }
 
   private async search({
@@ -175,7 +184,7 @@ export class SiemIndexerClient {
       }
 
       const payload = await this.search({
-        index: "wazuh-states-vulnerabilities",
+        index: this.vulnerabilitiesIndex,
         body,
       });
 
@@ -221,12 +230,37 @@ export async function getSiemIndexerClientForTenant(tenantSlug: string) {
     throw new Error("Credenciais do SIEM Indexer não configuradas.");
   }
 
+  const configuredVulnerabilitiesIndex = getOptionalCredentialValue(
+    integration,
+    "indexer_vulnerabilities_index"
+  )?.trim();
+
+  const vulnerabilitiesIndex = configuredVulnerabilitiesIndex
+    ? configuredVulnerabilitiesIndex
+    : DEFAULT_VULNERABILITIES_INDEX;
+
+  const vulnerabilitiesIndexSource: "tenant" | "fallback" =
+    configuredVulnerabilitiesIndex ? "tenant" : "fallback";
+
+  if (vulnerabilitiesIndexSource === "fallback") {
+    console.warn(
+      `[SIEM Indexer] tenant=${tenantSlug} vulnerabilitiesIndex="${vulnerabilitiesIndex}" source=fallback`
+    );
+  } else {
+    console.log(
+      `[SIEM Indexer] tenant=${tenantSlug} vulnerabilitiesIndex="${vulnerabilitiesIndex}" source=tenant`
+    );
+  }
+
   return {
     integration,
+    vulnerabilitiesIndex,
+    vulnerabilitiesIndexSource,
     client: new SiemIndexerClient({
       baseUrl: integration.externalOrgId,
       username,
       password,
+      vulnerabilitiesIndex,
     }),
   };
 }

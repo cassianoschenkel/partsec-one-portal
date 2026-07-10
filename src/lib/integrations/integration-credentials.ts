@@ -51,3 +51,16 @@ export async function getIntegrationCredential({
     value: decryptSecret(credential.encryptedValue),
   };
 }
+
+export function getOptionalCredentialValue(
+  integration: { credentials: { key: string; encryptedValue: string }[] },
+  key: string
+): string | undefined {
+  const credential = integration.credentials.find((item) => item.key === key);
+
+  if (!credential) {
+    return undefined;
+  }
+
+  return decryptSecret(credential.encryptedValue);
+}
