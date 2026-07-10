@@ -63,9 +63,8 @@ export async function syncTenantSiemVulnerabilities({
   });
 
   try {
-    const { client, integration } = await getSiemIndexerClientForTenant(
-      tenantSlug
-    );
+    const { client, integration, vulnerabilitiesIndex, vulnerabilitiesIndexSource } =
+      await getSiemIndexerClientForTenant(tenantSlug);
 
     const agents = await prisma.siemAgentSnapshot.findMany({
       where: {
@@ -193,7 +192,9 @@ export async function syncTenantSiemVulnerabilities({
         status: "SUCCESS",
         message: `Sincronização de vulnerabilidades SIEM concluída. Indexer: ${
           integration.externalOrgId ?? "não configurado"
-        }. Agentes: ${agents.length}. Vulnerabilidades: ${hits.length}. Resolvidas nesta sincronização: ${resolvedCount}.`,
+        }. Índice de vulnerabilidades: ${vulnerabilitiesIndex} (${
+          vulnerabilitiesIndexSource === "tenant" ? "configuração do tenant" : "fallback"
+        }). Agentes: ${agents.length}. Vulnerabilidades: ${hits.length}. Resolvidas nesta sincronização: ${resolvedCount}.`,
         finishedAt: new Date(),
         durationMs,
       },
