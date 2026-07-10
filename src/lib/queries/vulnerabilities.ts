@@ -62,7 +62,10 @@ function buildVulnerabilityWhere({
   filters: VulnerabilityFilters;
 }) {
   const severity = normalizeFilterValue(filters.severity);
-  const status = normalizeFilterValue(filters.status) ?? "OPEN";
+  const status =
+    filters.status === "ALL"
+      ? undefined
+      : normalizeFilterValue(filters.status) ?? "OPEN";
   const asset = normalizeFilterValue(filters.asset);
   const q = normalizeFilterValue(filters.q);
 
