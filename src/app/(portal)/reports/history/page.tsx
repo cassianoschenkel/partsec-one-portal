@@ -1,12 +1,20 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/../auth";
-import { ArrowLeft, History } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, History } from "lucide-react";
 import { getTenantReportHistory } from "@/lib/queries/report-history";
 import { NoTenantNotice } from "@/components/vulnerabilities/NoTenantNotice";
 import { ReportHistoryTable } from "@/components/reports/ReportHistoryTable";
 
-export default async function ReportHistoryPage() {
+type ReportHistoryPageProps = {
+  searchParams?: Promise<{
+    generation?: string;
+  }>;
+};
+
+export default async function ReportHistoryPage({
+  searchParams,
+}: ReportHistoryPageProps) {
   const session = await auth();
 
   if (!session?.user) {
@@ -16,6 +24,8 @@ export default async function ReportHistoryPage() {
   if (session.user.role === "PARTSEC_ADMIN") {
     redirect("/admin/tenants");
   }
+
+  const query = searchParams ? await searchParams : {};
 
   const history = await getTenantReportHistory();
 
@@ -60,6 +70,21 @@ export default async function ReportHistoryPage() {
           </p>
         </div>
       </section>
+
+      {query.generation === "success" && (
+        <section className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          Relatório Executivo gerado e salvo com sucesso.
+        </section>
+      )}
+
+      {query.generation === "failed" && (
+        <section className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-800">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          Não foi possível gerar o Relatório Executivo. A tentativa foi
+          registrada no histórico.
+        </section>
+      )}
 
       <ReportHistoryTable reports={history.reports} />
     </div>
