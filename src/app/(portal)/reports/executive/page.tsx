@@ -3,6 +3,8 @@ import Link from "next/link";
 import { auth } from "@/../auth";
 import { ArrowLeft, Printer, Target } from "lucide-react";
 import { getTenantExecutiveReport } from "@/lib/queries/executive-report";
+import { generateExecutiveReportAction } from "@/app/actions/report-actions";
+import { GenerateExecutiveReportButton } from "@/components/reports/GenerateExecutiveReportButton";
 import { NoTenantNotice } from "@/components/vulnerabilities/NoTenantNotice";
 import { InfoCard } from "@/components/vulnerabilities/InfoCard";
 import { formatDate } from "@/components/vulnerabilities/vulnerability-format";
@@ -54,13 +56,19 @@ export default async function ExecutiveReportPage() {
               Voltar para relatórios
             </Link>
 
-            <Link
-              href="/reports/executive/print"
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-wide text-cyan-100 transition hover:bg-white/20"
-            >
-              <Printer className="h-4 w-4" />
-              Versão para impressão
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              <form action={generateExecutiveReportAction}>
+                <GenerateExecutiveReportButton />
+              </form>
+
+              <Link
+                href="/reports/executive/print"
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-wide text-cyan-100 transition hover:bg-white/20"
+              >
+                <Printer className="h-4 w-4" />
+                Versão para impressão
+              </Link>
+            </div>
           </div>
 
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-wide text-cyan-100">
