@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/../auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma, ReportStatus, ReportType } from "@/generated/prisma/client";
-import { getTenantExecutiveReport } from "@/lib/queries/executive-report";
+import { getExecutiveReportForTenant } from "@/lib/queries/executive-report";
 import {
   buildExecutiveReportSnapshot,
   toReportRunJson,
@@ -33,6 +33,8 @@ export async function generateExecutiveReportAction() {
     redirect("/reports/history");
   }
 
+  const generatedAt = new Date();
+
   const reportRun = await prisma.reportRun.create({
     data: {
       tenantId,
@@ -40,7 +42,7 @@ export async function generateExecutiveReportAction() {
       status: ReportStatus.DRAFT,
       title: "Relatório Executivo",
       periodLabel: "Visão atual",
-      generatedAt: new Date(),
+      generatedAt,
       data: Prisma.DbNull,
       fileUrl: null,
     },
@@ -50,8 +52,7 @@ export async function generateExecutiveReportAction() {
   let redirectUrl: string;
 
   try {
-    const generatedAt = new Date();
-    const report = await getTenantExecutiveReport();
+    const report = await getExecutiveReportForTenant(tenantId);
 
     if (!report.hasTenant) {
       throw new Error(

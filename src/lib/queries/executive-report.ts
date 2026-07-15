@@ -175,13 +175,9 @@ function emptyExecutiveReport(): ExecutiveReportData {
   };
 }
 
-export async function getTenantExecutiveReport(): Promise<ExecutiveReportData> {
-  const tenantId = await getCurrentTenantId();
-
-  if (!tenantId) {
-    return emptyExecutiveReport();
-  }
-
+export async function getExecutiveReportForTenant(
+  tenantId: string
+): Promise<ExecutiveReportData> {
   const [
     tenant,
     openCount,
@@ -405,4 +401,14 @@ export async function getTenantExecutiveReport(): Promise<ExecutiveReportData> {
       topVulnerabilities: enrichedTopVulnerabilities,
     },
   };
+}
+
+export async function getTenantExecutiveReport(): Promise<ExecutiveReportData> {
+  const tenantId = await getCurrentTenantId();
+
+  if (!tenantId) {
+    return emptyExecutiveReport();
+  }
+
+  return getExecutiveReportForTenant(tenantId);
 }
