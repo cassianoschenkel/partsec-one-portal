@@ -1,4 +1,5 @@
 import { FileClock } from "lucide-react";
+import Link from "next/link";
 import { formatDate } from "@/components/vulnerabilities/vulnerability-format";
 import {
   getReportStatusBadgeClass,
@@ -47,6 +48,7 @@ export function ReportHistoryTable({
                 <th className="px-6 py-4 font-bold">Status</th>
                 <th className="px-6 py-4 font-bold">Período</th>
                 <th className="px-6 py-4 font-bold">Gerado em</th>
+                <th className="px-6 py-4 font-bold">Ações</th>
               </tr>
             </thead>
 
@@ -77,6 +79,20 @@ export function ReportHistoryTable({
 
                   <td className="px-6 py-4 align-top text-slate-600">
                     {formatDate(report.generatedAt)}
+                  </td>
+
+                  <td className="px-6 py-4 align-top">
+                    {report.type === "EXECUTIVE" &&
+                    report.status === "GENERATED" ? (
+                      <Link
+                        href={`/reports/history/${report.id}`}
+                        className="font-bold text-cyan-700 hover:underline"
+                      >
+                        Abrir relatório
+                      </Link>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
                   </td>
                 </tr>
               ))}
