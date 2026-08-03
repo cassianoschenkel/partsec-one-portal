@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/../auth";
-import { ArrowLeft, Target } from "lucide-react";
+import { ArrowLeft, Printer, Target } from "lucide-react";
 import { getTenantExecutiveReportRun } from "@/lib/queries/report-detail";
 import { parseExecutiveReportSnapshot } from "@/lib/report-snapshot";
 import { formatDate } from "@/components/vulnerabilities/vulnerability-format";
@@ -58,13 +58,21 @@ export default async function SavedExecutiveReportPage({
         <div className="absolute bottom-0 left-1/3 h-40 w-40 rounded-full bg-emerald-400/10 blur-3xl" />
 
         <div className="relative z-10">
-          <div className="mb-4 flex items-center justify-between gap-4">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
             <Link
               href="/reports/history"
               className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-wide text-cyan-100 transition hover:bg-white/20"
             >
               <ArrowLeft className="h-4 w-4" />
               Voltar ao histórico
+            </Link>
+
+            <Link
+              href={`/reports/history/${reportRun.id}/print`}
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-wide text-cyan-100 transition hover:bg-white/20"
+            >
+              <Printer className="h-4 w-4" />
+              Versão para impressão
             </Link>
           </div>
 
