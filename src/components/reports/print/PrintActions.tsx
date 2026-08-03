@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { ArrowLeft, Printer } from "lucide-react";
 
-export function PrintActions() {
+type PrintActionsProps = {
+  backHref?: string;
+  backLabel?: string;
+};
+
+export function PrintActions({
+  backHref = "/reports/executive",
+  backLabel = "Voltar para relatório",
+}: PrintActionsProps) {
   function handlePrint() {
     window.print();
   }
@@ -11,11 +19,11 @@ export function PrintActions() {
   return (
     <div className="mb-6 flex items-center justify-between gap-3 print:hidden">
       <Link
-        href="/reports/executive"
+        href={backHref}
         className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-wide text-slate-700 shadow-sm transition hover:bg-slate-50"
       >
         <ArrowLeft className="h-4 w-4" />
-        Voltar para relatório
+        {backLabel}
       </Link>
 
       <button
