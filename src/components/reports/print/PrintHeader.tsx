@@ -39,7 +39,9 @@ export function PrintHeader({
         <p>
           {lastSyncedAt
             ? `Última sincronização disponível: ${formatDate(lastSyncedAt)}`
-            : "Visão atual"}
+            : savedReport
+              ? "Última sincronização da fonte: não disponível"
+              : "Visão atual"}
         </p>
         <p className="mt-1">
           Relatório gerado em: {formatDate(generatedAt)}
