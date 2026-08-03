@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/../auth";
-import { ArrowLeft, Printer, Target } from "lucide-react";
+import { ArrowLeft, History, Printer, Target } from "lucide-react";
 import { getTenantExecutiveReport } from "@/lib/queries/executive-report";
 import { generateExecutiveReportAction } from "@/app/actions/report-actions";
 import { GenerateExecutiveReportButton } from "@/components/reports/GenerateExecutiveReportButton";
@@ -47,7 +47,7 @@ export default async function ExecutiveReportPage() {
         <div className="absolute bottom-0 left-1/3 h-40 w-40 rounded-full bg-emerald-400/10 blur-3xl" />
 
         <div className="relative z-10">
-          <div className="mb-4 flex items-center justify-between gap-4">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
             <Link
               href="/reports"
               className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-wide text-cyan-100 transition hover:bg-white/20"
@@ -60,6 +60,14 @@ export default async function ExecutiveReportPage() {
               <form action={generateExecutiveReportAction}>
                 <GenerateExecutiveReportButton />
               </form>
+
+              <Link
+                href="/reports/history"
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-wide text-cyan-100 transition hover:bg-white/20"
+              >
+                <History className="h-4 w-4" />
+                Relatórios salvos
+              </Link>
 
               <Link
                 href="/reports/executive/print"
