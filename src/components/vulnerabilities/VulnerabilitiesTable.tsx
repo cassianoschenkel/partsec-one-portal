@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 import { formatDate } from "./vulnerability-format";
 import { SeverityBadge, StatusBadge } from "./VulnerabilityBadges";
+import type { VulnerabilityPaginationMeta } from "@/lib/queries/vulnerability-pagination";
 
 export type VulnerabilityListItem = {
   id: string;
@@ -19,13 +20,17 @@ export type VulnerabilityListItem = {
   lastSeenAt: string | null;
 };
 
+function formatCount(value: number) {
+  return new Intl.NumberFormat("pt-BR").format(value);
+}
+
 export function VulnerabilitiesTable({
   vulnerabilities,
-  maxItems,
+  pagination,
   hrefFor,
 }: {
   vulnerabilities: VulnerabilityListItem[];
-  maxItems: number;
+  pagination: VulnerabilityPaginationMeta;
   hrefFor: (vulnerability: VulnerabilityListItem) => string;
 }) {
   return (
@@ -34,10 +39,14 @@ export function VulnerabilitiesTable({
         <h2 className="text-lg font-bold text-slate-950">
           Vulnerabilidades encontradas
         </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Listagem limitada aos {maxItems} itens mais relevantes conforme os
-          filtros aplicados.
-        </p>
+        {pagination.totalItems > 0 && (
+          <p className="mt-1 text-sm text-slate-500">
+            Exibindo {formatCount(pagination.rangeStart)}–
+            {formatCount(pagination.rangeEnd)} de{" "}
+            {formatCount(pagination.totalItems)} vulnerabilidades conforme os
+            filtros aplicados.
+          </p>
+        )}
       </div>
 
       {vulnerabilities.length === 0 ? (

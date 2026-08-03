@@ -5,6 +5,7 @@ import { getAdminTenantVulnerabilitiesOverview } from "@/lib/queries/admin-vulne
 import { VulnerabilitySummaryCards } from "@/components/vulnerabilities/SummaryCard";
 import { VulnerabilityFiltersForm } from "@/components/vulnerabilities/VulnerabilityFiltersForm";
 import { VulnerabilitiesTable } from "@/components/vulnerabilities/VulnerabilitiesTable";
+import { VulnerabilityPagination } from "@/components/vulnerabilities/VulnerabilityPagination";
 
 type AdminTenantVulnerabilitiesPageProps = {
   params: Promise<{
@@ -15,6 +16,7 @@ type AdminTenantVulnerabilitiesPageProps = {
     status?: string;
     asset?: string;
     q?: string;
+    page?: string | string[];
   }>;
 };
 
@@ -34,7 +36,7 @@ export default async function AdminTenantVulnerabilitiesPage({
     notFound();
   }
 
-  const { tenant, summary, vulnerabilities, assets } = data;
+  const { tenant, summary, vulnerabilities, assets, pagination } = data;
 
   const clearHref = `/admin/tenants/${tenant.slug}/vulnerabilities`;
 
@@ -66,13 +68,26 @@ export default async function AdminTenantVulnerabilitiesPage({
         clearHref={clearHref}
       />
 
-      <VulnerabilitiesTable
-        vulnerabilities={vulnerabilities}
-        maxItems={500}
-        hrefFor={(vulnerability) =>
-          `/admin/tenants/${tenant.slug}/vulnerabilities/${vulnerability.id}`
-        }
-      />
+      <div className="space-y-4">
+        <VulnerabilitiesTable
+          vulnerabilities={vulnerabilities}
+          pagination={pagination}
+          hrefFor={(vulnerability) =>
+            `/admin/tenants/${tenant.slug}/vulnerabilities/${vulnerability.id}`
+          }
+        />
+
+        <VulnerabilityPagination
+          basePath={`/admin/tenants/${tenant.slug}/vulnerabilities`}
+          filters={{
+            severity: filters.severity,
+            status: filters.status,
+            asset: filters.asset,
+            q: filters.q,
+          }}
+          meta={pagination}
+        />
+      </div>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { NoTenantNotice } from "@/components/vulnerabilities/NoTenantNotice";
 import { VulnerabilitySummaryCards } from "@/components/vulnerabilities/SummaryCard";
 import { VulnerabilityFiltersForm } from "@/components/vulnerabilities/VulnerabilityFiltersForm";
 import { VulnerabilitiesTable } from "@/components/vulnerabilities/VulnerabilitiesTable";
+import { VulnerabilityPagination } from "@/components/vulnerabilities/VulnerabilityPagination";
 
 type VulnerabilitiesPageProps = {
   searchParams: Promise<{
@@ -11,6 +12,7 @@ type VulnerabilitiesPageProps = {
     status?: string;
     asset?: string;
     q?: string;
+    page?: string | string[];
   }>;
 };
 
@@ -19,12 +21,13 @@ export default async function VulnerabilitiesPage({
 }: VulnerabilitiesPageProps) {
   const params = await searchParams;
 
-  const { hasTenant, summary, vulnerabilities, assets } =
+  const { hasTenant, summary, vulnerabilities, assets, pagination } =
     await getTenantVulnerabilitiesOverview({
       severity: params.severity,
       status: params.status,
       asset: params.asset,
       q: params.q,
+      page: params.page,
     });
 
   if (!hasTenant) {
@@ -73,11 +76,24 @@ export default async function VulnerabilitiesPage({
         clearHref="/vulnerabilities"
       />
 
-      <VulnerabilitiesTable
-        vulnerabilities={vulnerabilities}
-        maxItems={300}
-        hrefFor={(vulnerability) => `/vulnerabilities/${vulnerability.id}`}
-      />
+      <div className="space-y-4">
+        <VulnerabilitiesTable
+          vulnerabilities={vulnerabilities}
+          pagination={pagination}
+          hrefFor={(vulnerability) => `/vulnerabilities/${vulnerability.id}`}
+        />
+
+        <VulnerabilityPagination
+          basePath="/vulnerabilities"
+          filters={{
+            severity: params.severity,
+            status: params.status,
+            asset: params.asset,
+            q: params.q,
+          }}
+          meta={pagination}
+        />
+      </div>
     </div>
   );
 }
