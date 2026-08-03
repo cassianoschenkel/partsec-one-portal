@@ -1,28 +1,15 @@
 import { auth } from "@/../auth";
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@/generated/prisma/client";
+import {
+  EMPTY_VULNERABILITY_PAGINATION,
+  buildVulnerabilityFilterWhere,
+  formatNullableDate,
+  paginateVulnerabilities,
+  type VulnerabilityFilters,
+  type VulnerabilityPageParams,
+} from "./vulnerability-pagination";
 
-const severityOrder: Record<string, number> = {
-  CRITICAL: 1,
-  HIGH: 2,
-  MEDIUM: 3,
-  LOW: 4,
-};
-
-export type VulnerabilityFilters = {
-  severity?: string;
-  status?: string;
-  asset?: string;
-  q?: string;
-};
-
-function formatNullableDate(date: Date | null) {
-  if (!date) {
-    return null;
-  }
-
-  return date.toISOString();
-}
+export type { VulnerabilityFilters, VulnerabilityPageParams };
 
 async function getCurrentTenantId() {
   const session = await auth();
@@ -46,86 +33,11 @@ async function getCurrentTenantId() {
   return user?.tenantId ?? null;
 }
 
-function normalizeFilterValue(value?: string) {
-  if (!value || value === "ALL") {
-    return undefined;
-  }
-
-  return value.trim();
-}
-
-function buildVulnerabilityWhere({
-  tenantId,
-  filters,
-}: {
-  tenantId: string;
-  filters: VulnerabilityFilters;
-}) {
-  const severity = normalizeFilterValue(filters.severity);
-  const status =
-    filters.status === "ALL"
-      ? undefined
-      : normalizeFilterValue(filters.status) ?? "OPEN";
-  const asset = normalizeFilterValue(filters.asset);
-  const q = normalizeFilterValue(filters.q);
-
-  const where: Prisma.SiemVulnerabilitySnapshotWhereInput = {
-    tenantId,
-  };
-
-  if (status) {
-    where.status = status;
-  }
-
-  if (severity) {
-    where.severity = severity;
-  }
-
-  if (asset) {
-    where.wazuhAgentId = asset;
-  }
-
-  if (q) {
-    where.OR = [
-      {
-        cve: {
-          contains: q,
-          mode: "insensitive",
-        },
-      },
-      {
-        title: {
-          contains: q,
-          mode: "insensitive",
-        },
-      },
-      {
-        packageName: {
-          contains: q,
-          mode: "insensitive",
-        },
-      },
-      {
-        packageVersion: {
-          contains: q,
-          mode: "insensitive",
-        },
-      },
-      {
-        condition: {
-          contains: q,
-          mode: "insensitive",
-        },
-      },
-    ];
-  }
-
-  return where;
-}
-
 export async function getTenantVulnerabilitiesOverview(
-  filters: VulnerabilityFilters = {}
+  params: VulnerabilityPageParams = {}
 ) {
+  const { page, ...filters } = params;
+
   const tenantId = await getCurrentTenantId();
 
   if (!tenantId) {
@@ -142,130 +54,107 @@ export async function getTenantVulnerabilitiesOverview(
       },
       assets: [],
       vulnerabilities: [],
+      pagination: EMPTY_VULNERABILITY_PAGINATION,
     };
   }
 
-  const filteredWhere = buildVulnerabilityWhere({
+  const filteredWhere = buildVulnerabilityFilterWhere({
     tenantId,
     filters,
   });
 
   const [
-    openCount,
-    resolvedCount,
-    criticalCount,
-    highCount,
-    mediumCount,
-    lowCount,
-    vulnerabilities,
-    agents,
-    assets,
+    [
+      openCount,
+      resolvedCount,
+      criticalCount,
+      highCount,
+      mediumCount,
+      lowCount,
+      agents,
+      assets,
+    ],
+    paginated,
   ] = await Promise.all([
-    prisma.siemVulnerabilitySnapshot.count({
-      where: {
-        tenantId,
-        status: "OPEN",
-      },
-    }),
-
-    prisma.siemVulnerabilitySnapshot.count({
-      where: {
-        tenantId,
-        status: "RESOLVED",
-      },
-    }),
-
-    prisma.siemVulnerabilitySnapshot.count({
-      where: {
-        tenantId,
-        status: "OPEN",
-        severity: "CRITICAL",
-      },
-    }),
-
-    prisma.siemVulnerabilitySnapshot.count({
-      where: {
-        tenantId,
-        status: "OPEN",
-        severity: "HIGH",
-      },
-    }),
-
-    prisma.siemVulnerabilitySnapshot.count({
-      where: {
-        tenantId,
-        status: "OPEN",
-        severity: "MEDIUM",
-      },
-    }),
-
-    prisma.siemVulnerabilitySnapshot.count({
-      where: {
-        tenantId,
-        status: "OPEN",
-        severity: "LOW",
-      },
-    }),
-
-    prisma.siemVulnerabilitySnapshot.findMany({
-      where: filteredWhere,
-      orderBy: [
-        {
-          score: "desc",
+    Promise.all([
+      prisma.siemVulnerabilitySnapshot.count({
+        where: {
+          tenantId,
+          status: "OPEN",
         },
-        {
-          lastSeenAt: "desc",
-        },
-        {
-          cve: "asc",
-        },
-      ],
-      take: 300,
-      select: {
-        id: true,
-        wazuhAgentId: true,
-        cve: true,
-        title: true,
-        severity: true,
-        score: true,
-        packageName: true,
-        packageVersion: true,
-        fixedVersion: true,
-        condition: true,
-        externalReference: true,
-        status: true,
-        detectedAt: true,
-        publishedAt: true,
-        lastSeenAt: true,
-      },
-    }),
+      }),
 
-    prisma.siemAgentSnapshot.findMany({
-      where: {
-        tenantId,
-      },
-      orderBy: {
-        name: "asc",
-      },
-      select: {
-        wazuhAgentId: true,
-        name: true,
-        ip: true,
-        operatingSystem: true,
-      },
-    }),
-
-    prisma.customerAsset.findMany({
-      where: {
-        tenantId,
-        wazuhAgentId: {
-          not: null,
+      prisma.siemVulnerabilitySnapshot.count({
+        where: {
+          tenantId,
+          status: "RESOLVED",
         },
-      },
-      select: {
-        name: true,
-        wazuhAgentId: true,
-      },
+      }),
+
+      prisma.siemVulnerabilitySnapshot.count({
+        where: {
+          tenantId,
+          status: "OPEN",
+          severity: "CRITICAL",
+        },
+      }),
+
+      prisma.siemVulnerabilitySnapshot.count({
+        where: {
+          tenantId,
+          status: "OPEN",
+          severity: "HIGH",
+        },
+      }),
+
+      prisma.siemVulnerabilitySnapshot.count({
+        where: {
+          tenantId,
+          status: "OPEN",
+          severity: "MEDIUM",
+        },
+      }),
+
+      prisma.siemVulnerabilitySnapshot.count({
+        where: {
+          tenantId,
+          status: "OPEN",
+          severity: "LOW",
+        },
+      }),
+
+      prisma.siemAgentSnapshot.findMany({
+        where: {
+          tenantId,
+        },
+        orderBy: {
+          name: "asc",
+        },
+        select: {
+          wazuhAgentId: true,
+          name: true,
+          ip: true,
+          operatingSystem: true,
+        },
+      }),
+
+      prisma.customerAsset.findMany({
+        where: {
+          tenantId,
+          wazuhAgentId: {
+            not: null,
+          },
+        },
+        select: {
+          name: true,
+          wazuhAgentId: true,
+        },
+      }),
+    ]),
+
+    paginateVulnerabilities({
+      filteredWhere,
+      page,
     }),
   ]);
 
@@ -289,42 +178,31 @@ export async function getTenantVulnerabilitiesOverview(
     };
   });
 
-  const enrichedVulnerabilities = vulnerabilities
-    .map((vulnerability) => {
-      const agent = agentsById.get(vulnerability.wazuhAgentId);
-      const asset = assetsByAgentId.get(vulnerability.wazuhAgentId);
+  const enrichedVulnerabilities = paginated.items.map((vulnerability) => {
+    const agent = agentsById.get(vulnerability.wazuhAgentId);
+    const asset = assetsByAgentId.get(vulnerability.wazuhAgentId);
 
-      return {
-        id: vulnerability.id,
-        wazuhAgentId: vulnerability.wazuhAgentId,
-        cve: vulnerability.cve,
-        title: vulnerability.title,
-        severity: vulnerability.severity,
-        score: vulnerability.score,
-        packageName: vulnerability.packageName,
-        packageVersion: vulnerability.packageVersion,
-        fixedVersion: vulnerability.fixedVersion,
-        condition: vulnerability.condition,
-        externalReference: vulnerability.externalReference,
-        status: vulnerability.status,
-        detectedAt: formatNullableDate(vulnerability.detectedAt),
-        publishedAt: formatNullableDate(vulnerability.publishedAt),
-        lastSeenAt: formatNullableDate(vulnerability.lastSeenAt),
-        assetName: asset?.name ?? agent?.name ?? "Ativo não vinculado",
-        assetIp: agent?.ip ?? null,
-        operatingSystem: agent?.operatingSystem ?? null,
-      };
-    })
-    .sort((a, b) => {
-      const severityA = severityOrder[a.severity ?? ""] ?? 99;
-      const severityB = severityOrder[b.severity ?? ""] ?? 99;
-
-      if (severityA !== severityB) {
-        return severityA - severityB;
-      }
-
-      return (b.score ?? 0) - (a.score ?? 0);
-    });
+    return {
+      id: vulnerability.id,
+      wazuhAgentId: vulnerability.wazuhAgentId,
+      cve: vulnerability.cve,
+      title: vulnerability.title,
+      severity: vulnerability.severity,
+      score: vulnerability.score,
+      packageName: vulnerability.packageName,
+      packageVersion: vulnerability.packageVersion,
+      fixedVersion: vulnerability.fixedVersion,
+      condition: vulnerability.condition,
+      externalReference: vulnerability.externalReference,
+      status: vulnerability.status,
+      detectedAt: formatNullableDate(vulnerability.detectedAt),
+      publishedAt: formatNullableDate(vulnerability.publishedAt),
+      lastSeenAt: formatNullableDate(vulnerability.lastSeenAt),
+      assetName: asset?.name ?? agent?.name ?? "Ativo não vinculado",
+      assetIp: agent?.ip ?? null,
+      operatingSystem: agent?.operatingSystem ?? null,
+    };
+  });
 
   return {
     hasTenant: true,
@@ -339,5 +217,6 @@ export async function getTenantVulnerabilitiesOverview(
     },
     assets: assetOptions,
     vulnerabilities: enrichedVulnerabilities,
+    pagination: paginated.meta,
   };
 }
