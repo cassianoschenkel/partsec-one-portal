@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Partsec One Portal
 
-## Getting Started
+Customer-facing portal for the Partsec One managed-services platform.
 
-First, run the development server:
+The application is multi-tenant and consolidates operational information such as monitored assets, alerts, SIEM vulnerability data, support/ticketing views and generated reports while keeping global administration under Partsec control.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Stack
+- Next.js 16 / App Router
+- React 19
+- TypeScript
+- Prisma 7
+- PostgreSQL
+- Auth.js / NextAuth 5 beta
+- Tailwind CSS 4
+- Nodemailer
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Development
+1. Install dependencies:
+   `npm install`
+2. Copy the environment template:
+   `cp .env.example .env`
+3. Configure PostgreSQL, Auth.js, application URL, integration encryption and SMTP variables.
+4. Apply the appropriate Prisma migrations for your environment.
+5. Start development:
+   `npm run dev`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Available scripts:
+- `npm run dev`
+- `npm run build`
+- `npm run start`
+- `npm run lint`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+There is currently no repository-defined automated test script; see the assessment and development guide for planned hardening.
 
-## Learn More
+## Project documentation
+Before making non-trivial changes, read:
+- `AGENTS.md`
+- `docs/PROJECT_RULES.md`
+- `docs/ARCHITECTURE.md`
+- `docs/SECURITY.md`
+- `docs/DEVELOPMENT.md`
 
-To learn more about Next.js, take a look at the following resources:
+Initial technical assessment:
+- `docs/ASSESSMENT-2026-08-07.md`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Agent collaboration
+Claude Code and Codex use the same repository-local architecture and security rules. They must not modify the same branch concurrently. Changes should be made on a dedicated branch and reviewed through a pull request; agents must not merge or deploy production without explicit human approval.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Product terminology
+Customer-facing UI should prefer product-neutral terminology where practical:
+- Wazuh -> SIEM
+- Zammad -> Central de Suporte / Suporte / Chamados
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Technical names may remain in internal/admin implementation where operationally useful.
