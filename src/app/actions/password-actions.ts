@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getPasswordSetupTokenHash } from "@/lib/password-setup-token";
+import { isSetupTokenUsable } from "@/lib/setup-token-rules";
 
 export async function setPasswordAction(formData: FormData) {
   const token = String(formData.get("token") ?? "").trim();
@@ -30,19 +31,33 @@ export async function setPasswordAction(formData: FormData) {
     where: {
       tokenHash,
     },
-    include: {
-      user: true,
-    },
   });
 
-  if (!setupToken || setupToken.usedAt || setupToken.expiresAt < new Date()) {
+  if (!setupToken || !isSetupTokenUsable(setupToken)) {
     redirect("/set-password?error=invalid_token");
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
 
-  await prisma.$transaction([
-    prisma.user.update({
+  const result = await prisma.$transaction(async (tx) => {
+    const consumed = await tx.passwordSetupToken.updateMany({
+      where: {
+        id: setupToken.id,
+        usedAt: null,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+      data: {
+        usedAt: new Date(),
+      },
+    });
+
+    if (consumed.count !== 1) {
+      return { ok: false as const };
+    }
+
+    await tx.user.update({
       where: {
         id: setupToken.userId,
       },
@@ -50,16 +65,14 @@ export async function setPasswordAction(formData: FormData) {
         passwordHash,
         isActive: true,
       },
-    }),
-    prisma.passwordSetupToken.update({
-      where: {
-        id: setupToken.id,
-      },
-      data: {
-        usedAt: new Date(),
-      },
-    }),
-  ]);
+    });
+
+    return { ok: true as const };
+  });
+
+  if (!result.ok) {
+    redirect("/set-password?error=invalid_token");
+  }
 
   redirect("/login?passwordSet=success");
 }

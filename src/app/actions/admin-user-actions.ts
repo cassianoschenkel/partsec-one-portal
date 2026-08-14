@@ -3,9 +3,9 @@
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { auth } from "@/../auth";
 import { prisma } from "@/lib/prisma";
 import { UserRole } from "@/generated/prisma/client";
+import { requirePartsecAdmin } from "@/lib/authz/server-authorization";
 
 function redirectWithCreateUserError({
   message,
@@ -65,32 +65,6 @@ function redirectWithTenantUserEditError({
   redirect(
     `/admin/tenants/${tenantSlug}/users/${userId}/edit?${params.toString()}`
   );
-}
-
-async function requirePartsecAdmin() {
-  const session = await auth();
-
-  if (!session?.user?.email) {
-    throw new Error("Usuário não autenticado.");
-  }
-
-  const user = await prisma.user.findUnique({
-    where: {
-      email: session.user.email,
-    },
-    select: {
-      id: true,
-      email: true,
-      role: true,
-      isActive: true,
-    },
-  });
-
-  if (!user || !user.isActive || user.role !== UserRole.PARTSEC_ADMIN) {
-    throw new Error("Acesso restrito a administradores globais.");
-  }
-
-  return user;
 }
 
 export async function createGlobalAdminUserAction(formData: FormData) {

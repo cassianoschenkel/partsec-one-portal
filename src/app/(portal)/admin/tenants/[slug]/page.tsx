@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { getAdminTenantBySlug } from "@/lib/queries/admin";
+import { setupTokenCookieName } from "@/lib/setup-token-cookie";
 import {
   ArrowLeft,
   Building2,
@@ -17,7 +19,7 @@ type AdminTenantDetailPageProps = {
   }>;
   searchParams?: Promise<{
     createdUserEmail?: string;
-    setupToken?: string;
+    createdUserId?: string;
     inviteSent?: string;
   }>;
 };
@@ -35,14 +37,19 @@ type AdminTenantDetailPageProps = {
     notFound();
   }
 
-  const setupToken = query.setupToken;
   const createdUserEmail = query.createdUserEmail;
-  const inviteSent = query.inviteSent;
+  const createdUserId = query.createdUserId;
+  const inviteSent = query.inviteSent === "true";
+  const showUserCreatedPanel = Boolean(createdUserEmail && query.inviteSent);
+
+  const setupToken =
+    !inviteSent && createdUserId
+      ? (await cookies()).get(setupTokenCookieName(createdUserId))?.value
+      : undefined;
 
   const appUrl = process.env.APP_URL?.replace(/\/+$/, "") ?? "";
 
-  const setupPasswordUrl =
-  setupToken && createdUserEmail
+  const setupPasswordUrl = setupToken
     ? `${appUrl}/set-password?token=${setupToken}`
     : null;
 
@@ -90,15 +97,17 @@ type AdminTenantDetailPageProps = {
           </span>
         </div>
       </section>
-	  {setupPasswordUrl && (
+	  {showUserCreatedPanel && (
 	  <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6 text-emerald-900">
 		<div className="font-bold">Usuário criado com sucesso</div>
 		<p className="mt-1 text-sm leading-6">
-		  {inviteSent === "true"
-		    ? "O convite de acesso foi enviado por e-mail. O link abaixo também pode ser usado como fallback operacional."
-		    : "Não foi possível enviar o convite por e-mail. Envie o link abaixo manualmente para o usuário definir a senha inicial."}
+		  {inviteSent
+		    ? "O convite de acesso foi enviado por e-mail."
+		    : setupPasswordUrl
+		    ? "Não foi possível enviar o convite por e-mail. Envie o link abaixo manualmente para o usuário definir a senha inicial."
+		    : "Não foi possível enviar o convite por e-mail e o link temporário de fallback expirou nesta tela. Gere um novo convite para o usuário."}
 		</p>
-		
+
 		<div className="mt-4 rounded-2xl bg-white p-4">
 		  <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
 			Usuário
@@ -107,17 +116,23 @@ type AdminTenantDetailPageProps = {
 			{createdUserEmail}
 		  </div>
 
-		  <div className="mt-4 text-xs font-semibold uppercase tracking-wide text-emerald-700">
-			Link de definição de senha
-		  </div>
-		  <div className="mt-1 break-all font-mono text-sm text-slate-800">
-			{setupPasswordUrl}
-		  </div>
+		  {setupPasswordUrl && (
+		    <>
+		      <div className="mt-4 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+		        Link de definição de senha
+		      </div>
+		      <div className="mt-1 break-all font-mono text-sm text-slate-800">
+		        {setupPasswordUrl}
+		      </div>
+		    </>
+		  )}
 		</div>
 
-		<p className="mt-3 text-xs leading-5 text-emerald-800">
-		  Este token expira em 24 horas e só pode ser usado uma vez.
-		</p>
+		{setupPasswordUrl && (
+		  <p className="mt-3 text-xs leading-5 text-emerald-800">
+		    Este link fica disponível para cópia nesta tela por poucos minutos. Após copiado, o token expira em 24 horas e só pode ser usado uma vez.
+		  </p>
+		)}
 		
 	  </section>
 	)}

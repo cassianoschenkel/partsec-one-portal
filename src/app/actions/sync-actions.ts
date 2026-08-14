@@ -3,8 +3,11 @@
 import { redirect } from "next/navigation";
 import { syncTenantZabbixBySlug } from "@/lib/sync/zabbix-sync";
 import { importZabbixAssetsForTenantBySlug } from "@/lib/sync/zabbix-assets-import";
+import { requirePartsecAdmin } from "@/lib/authz/server-authorization";
 
 export async function syncTenantZabbixNowAction(tenantSlug: string) {
+  await requirePartsecAdmin();
+
   let redirectUrl = `/admin/tenants/${tenantSlug}/sync?syncStatus=success`;
 
   try {

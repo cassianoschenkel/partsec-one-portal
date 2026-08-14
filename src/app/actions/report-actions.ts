@@ -2,36 +2,44 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { auth } from "@/../auth";
 import { prisma } from "@/lib/prisma";
-import { Prisma, ReportStatus, ReportType } from "@/generated/prisma/client";
+import { Prisma, ReportStatus, ReportType, UserRole } from "@/generated/prisma/client";
 import { getExecutiveReportForTenant } from "@/lib/queries/executive-report";
 import {
   buildExecutiveReportSnapshot,
   toReportRunJson,
 } from "@/lib/report-snapshot";
+import { assertTenantMutationRole, AuthorizationError } from "@/lib/authz/rules";
+import { requireActiveUser } from "@/lib/authz/server-authorization";
 
 export async function generateExecutiveReportAction() {
-  const session = await auth();
+  let user;
 
-  if (!session?.user) {
-    redirect("/login");
+  try {
+    user = await requireActiveUser();
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      redirect("/login");
+    }
+
+    throw error;
   }
 
-  if (session.user.role === "PARTSEC_ADMIN") {
+  if (user.role === UserRole.PARTSEC_ADMIN) {
     redirect("/admin/tenants");
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { tenantId: true },
-  });
+  try {
+    assertTenantMutationRole(user);
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      redirect("/reports/history");
+    }
 
-  const tenantId = user?.tenantId ?? null;
-
-  if (!tenantId) {
-    redirect("/reports/history");
+    throw error;
   }
+
+  const tenantId = user.tenantId;
 
   const generatedAt = new Date();
 
