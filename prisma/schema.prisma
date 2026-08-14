@@ -38,6 +38,12 @@ enum IntegrationStatus {
   ERROR
 }
 
+enum IntegrationSyncKind {
+  ZABBIX_SNAPSHOT
+  SIEM_AGENTS
+  SIEM_VULNERABILITIES
+}
+
 enum ReportType {
   EXECUTIVE
   MANAGERIAL
@@ -231,12 +237,13 @@ model ZabbixProblemSnapshot {
 }
 
 model IntegrationSyncLog {
-  id              String          @id @default(cuid())
+  id              String               @id @default(cuid())
   tenantId        String
   integrationType IntegrationType
+  syncKind        IntegrationSyncKind?
   status          String
   message         String?
-  startedAt       DateTime        @default(now())
+  startedAt       DateTime             @default(now())
   finishedAt      DateTime?
   durationMs      Int?
 
@@ -245,6 +252,7 @@ model IntegrationSyncLog {
   @@index([tenantId])
   @@index([integrationType])
   @@index([startedAt])
+  @@index([tenantId, integrationType, syncKind, startedAt])
   @@map("integration_sync_logs")
 }
 
