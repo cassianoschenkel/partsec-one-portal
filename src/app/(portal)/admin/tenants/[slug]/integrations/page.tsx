@@ -7,7 +7,13 @@ import {
   updateTenantIntegrationCredentialAction,
 } from "@/app/actions/tenant-actions";
 import { getAdminTenantBySlug } from "@/lib/queries/admin";
+import { getAdminTenantIntegrationHealth } from "@/lib/queries/integration-health";
 import { IntegrationType } from "@/generated/prisma/client";
+import type {
+  IntegrationActivityStatus,
+  IntegrationHealth,
+  IntegrationHealthStatus,
+} from "@/lib/integration-health/policy";
 
 type TenantIntegrationsPageProps = {
   params: Promise<{
@@ -56,6 +62,177 @@ function getCredentialStatusLabel({
   return hasApiToken ? "API token cadastrado" : "Nenhum API token cadastrado";
 }
 
+const healthStatusLabels: Record<IntegrationHealthStatus, string> = {
+  INACTIVE: "Inativa",
+  UNKNOWN: "Desconhecida",
+  HEALTHY: "Saudável",
+  STALE: "Desatualizada",
+  DEGRADED: "Degradada",
+  ERROR: "Erro",
+  UNMONITORED: "Não monitorada",
+};
+
+const activityStatusLabels: Record<IntegrationActivityStatus, string> = {
+  IDLE: "Ociosa",
+  RUNNING: "Em execução",
+  STUCK: "Travada",
+};
+
+function healthBadgeClass(status: IntegrationHealthStatus) {
+  switch (status) {
+    case "HEALTHY":
+      return "rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700";
+    case "STALE":
+      return "rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700";
+    case "DEGRADED":
+      return "rounded-full bg-orange-50 px-2.5 py-1 text-xs font-bold text-orange-700";
+    case "ERROR":
+      return "rounded-full bg-red-50 px-2.5 py-1 text-xs font-bold text-red-700";
+    default:
+      return "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600";
+  }
+}
+
+function activityBadgeClass(activity: IntegrationActivityStatus) {
+  switch (activity) {
+    case "RUNNING":
+      return "rounded-full bg-sky-50 px-2.5 py-1 text-xs font-bold text-sky-700";
+    case "STUCK":
+      return "rounded-full bg-red-50 px-2.5 py-1 text-xs font-bold text-red-700";
+    default:
+      return "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600";
+  }
+}
+
+function formatHealthDateTime(value: Date | null) {
+  if (!value) {
+    return "—";
+  }
+
+  return value.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+}
+
+function formatHealthDuration(durationMs: number | null) {
+  if (durationMs === null) {
+    return "—";
+  }
+
+  return `${(durationMs / 1000).toFixed(1)}s`;
+}
+
+function IntegrationHealthField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+        {label}
+      </dt>
+      <dd className="mt-0.5 text-slate-700">{value}</dd>
+    </div>
+  );
+}
+
+function IntegrationHealthPanel({ health }: { health: IntegrationHealth }) {
+  const isUnmonitoredSupportPipeline =
+    health.integrationType === IntegrationType.ZAMMAD && health.status === "UNMONITORED";
+  const isComposite = Boolean(health.components);
+
+  return (
+    <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <h4 className="text-xs font-bold uppercase tracking-wide text-slate-400">
+          Saúde operacional
+        </h4>
+
+        <div className="flex items-center gap-2">
+          <span className={healthBadgeClass(health.status)}>
+            {healthStatusLabels[health.status]}
+          </span>
+          <span className={activityBadgeClass(health.activity)}>
+            {activityStatusLabels[health.activity]}
+          </span>
+        </div>
+      </div>
+
+      {isUnmonitoredSupportPipeline ? (
+        <p className="text-sm text-slate-500">
+          Saúde ainda não monitorada. Não há pipeline de sincronização
+          implementado para esta integração nesta versão do portal.
+        </p>
+      ) : (
+        <>
+          <dl
+            className={
+              isComposite
+                ? "grid gap-3 text-sm sm:grid-cols-3"
+                : "grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4"
+            }
+          >
+            <IntegrationHealthField
+              label={isComposite ? "Última atividade" : "Última tentativa"}
+              value={formatHealthDateTime(health.lastAttemptAt)}
+            />
+            <IntegrationHealthField
+              label={isComposite ? "Sucesso de componente mais recente" : "Último sucesso"}
+              value={formatHealthDateTime(health.lastSuccessAt)}
+            />
+            <IntegrationHealthField
+              label={isComposite ? "Erro de componente mais recente" : "Último erro"}
+              value={formatHealthDateTime(health.lastErrorAt)}
+            />
+            {!isComposite && (
+              <IntegrationHealthField
+                label="Duração da última tentativa"
+                value={formatHealthDuration(health.durationMs)}
+              />
+            )}
+          </dl>
+
+          {health.message && (
+            <p className="mt-3 text-xs leading-5 text-slate-500">{health.message}</p>
+          )}
+        </>
+      )}
+
+      {health.components && (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {health.components.map((component) => (
+            <div
+              key={component.key}
+              className="rounded-xl border border-slate-200 bg-white p-3"
+            >
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-700">
+                  {component.key === "agents" ? "Agentes" : "Vulnerabilidades"}
+                </span>
+
+                <div className="flex items-center gap-1">
+                  <span className={healthBadgeClass(component.status)}>
+                    {healthStatusLabels[component.status]}
+                  </span>
+                  <span className={activityBadgeClass(component.activity)}>
+                    {activityStatusLabels[component.activity]}
+                  </span>
+                </div>
+              </div>
+
+              <dl className="grid gap-1 text-xs text-slate-500">
+                <div>Última tentativa: {formatHealthDateTime(component.lastAttemptAt)}</div>
+                <div>Último sucesso: {formatHealthDateTime(component.lastSuccessAt)}</div>
+                <div>Último erro: {formatHealthDateTime(component.lastErrorAt)}</div>
+                <div>Duração: {formatHealthDuration(component.durationMs)}</div>
+              </dl>
+
+              {component.message && (
+                <p className="mt-2 text-xs leading-5 text-slate-500">{component.message}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function hasCredentialConfigured({
   integrationType,
   hasApiToken,
@@ -78,11 +255,26 @@ export default async function TenantIntegrationsPage({
   params,
 }: TenantIntegrationsPageProps) {
   const { slug } = await params;
+
+  // Sequential on purpose: requirePartsecAdmin() inside
+  // getAdminTenantIntegrationHealth must fully resolve before any tenant
+  // data is read — running these in parallel let the tenant lookup start
+  // before authorization had concluded.
+  const integrationHealth = await getAdminTenantIntegrationHealth(slug);
+
+  if (!integrationHealth) {
+    notFound();
+  }
+
   const tenant = await getAdminTenantBySlug(slug);
 
   if (!tenant) {
     notFound();
   }
+
+  const healthByType = new Map(
+    integrationHealth.map((health) => [health.integrationType, health])
+  );
 
   return (
     <div className="space-y-8">
@@ -150,6 +342,8 @@ export default async function TenantIntegrationsPage({
               ? testZabbixIntegrationAction.bind(null, tenant.slug)
               : null;
 
+          const health = healthByType.get(integration.type as IntegrationType);
+
           return (
             <div
               key={integration.id}
@@ -173,18 +367,25 @@ export default async function TenantIntegrationsPage({
                   </div>
                 </div>
 
-                <span
-                  className={
-                    integration.status === "ACTIVE"
-                      ? "rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700"
-                      : integration.status === "ERROR"
-                        ? "rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-700"
-                        : "rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600"
-                  }
-                >
-                  {integration.status}
-                </span>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                    Configuração
+                  </span>
+                  <span
+                    className={
+                      integration.status === "ACTIVE"
+                        ? "rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700"
+                        : integration.status === "ERROR"
+                          ? "rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-700"
+                          : "rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600"
+                    }
+                  >
+                    {integration.status}
+                  </span>
+                </div>
               </div>
+
+              {health && <IntegrationHealthPanel health={health} />}
 
               <div className="grid gap-6 xl:grid-cols-3">
                 <form

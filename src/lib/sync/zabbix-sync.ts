@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { IntegrationType } from "@/generated/prisma/client";
+import { IntegrationSyncKind, IntegrationType } from "@/generated/prisma/client";
 import { getTenantsWithActiveZabbixIntegration } from "@/lib/queries/sync";
 import { getTenantZabbixOverview } from "@/lib/queries/zabbix";
 
@@ -34,6 +34,7 @@ export async function syncTenantZabbix({
     data: {
       tenantId,
       integrationType: IntegrationType.ZABBIX,
+      syncKind: IntegrationSyncKind.ZABBIX_SNAPSHOT,
       status: "RUNNING",
       startedAt,
       message: "Sincronização Zabbix iniciada.",

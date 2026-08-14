@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { IntegrationType } from "@/generated/prisma/client";
+import { IntegrationSyncKind, IntegrationType } from "@/generated/prisma/client";
 import { getSiemIndexerClientForTenant } from "@/lib/integrations/siem-indexer-client";
 import { getTenantsWithActiveSiemIntegration } from "@/lib/queries/siem-sync";
 
@@ -56,6 +56,7 @@ export async function syncTenantSiemVulnerabilities({
     data: {
       tenantId,
       integrationType: IntegrationType.WAZUH,
+      syncKind: IntegrationSyncKind.SIEM_VULNERABILITIES,
       status: "RUNNING",
       startedAt,
       message: "Sincronização de vulnerabilidades SIEM iniciada.",
