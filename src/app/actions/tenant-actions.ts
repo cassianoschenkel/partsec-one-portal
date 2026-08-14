@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { auth } from "@/../auth";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { encryptSecret } from "@/lib/crypto";
 import { createSlug } from "@/lib/slug";
@@ -16,8 +16,12 @@ import {
   IntegrationType,
   UserRole,
 } from "@/generated/prisma/client";
+import { requirePartsecAdmin } from "@/lib/authz/server-authorization";
+import { setupTokenCookieName } from "@/lib/setup-token-cookie";
 
 export async function createTenantAction(formData: FormData) {
+  await requirePartsecAdmin();
+
   const name = String(formData.get("name") ?? "").trim();
   const document = String(formData.get("document") ?? "").trim();
   const slugInput = String(formData.get("slug") ?? "").trim();
@@ -81,6 +85,8 @@ export async function createTenantUserAction(
   tenantSlug: string,
   formData: FormData
 ) {
+  await requirePartsecAdmin();
+
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const roleInput = String(formData.get("role") ?? "").trim();
@@ -145,7 +151,7 @@ export async function createTenantUserAction(
     setupUrl,
   });
 
-  let inviteSent = "true";
+  let inviteSent = true;
 
   try {
     await sendEmail({
@@ -155,14 +161,26 @@ export async function createTenantUserAction(
       text: emailContent.text,
     });
   } catch (error) {
-    inviteSent = "false";
+    inviteSent = false;
     console.error("Falha ao enviar convite de acesso:", error);
+  }
+
+  if (!inviteSent) {
+    const cookieStore = await cookies();
+
+    cookieStore.set(setupTokenCookieName(user.id), rawToken, {
+      httpOnly: true,
+      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 120,
+      path: `/admin/tenants/${tenant.slug}`,
+    });
   }
 
   redirect(
     `/admin/tenants/${tenant.slug}?createdUserEmail=${encodeURIComponent(
       user.email
-    )}&setupToken=${rawToken}&inviteSent=${inviteSent}`
+    )}&createdUserId=${user.id}&inviteSent=${inviteSent}`
   );
 }
 
@@ -170,6 +188,8 @@ export async function createTenantAssetAction(
   tenantSlug: string,
   formData: FormData
 ) {
+  await requirePartsecAdmin();
+
   const name = String(formData.get("name") ?? "").trim();
   const hostname = String(formData.get("hostname") ?? "").trim();
   const ipAddress = String(formData.get("ipAddress") ?? "").trim();
@@ -232,6 +252,8 @@ export async function updateTenantIntegrationAction(
   integrationType: IntegrationType,
   formData: FormData
 ) {
+  await requirePartsecAdmin();
+
   const statusInput = String(formData.get("status") ?? "").trim();
   const baseUrl = String(formData.get("baseUrl") ?? "").trim();
   const externalGroupId = String(formData.get("externalGroupId") ?? "").trim();
@@ -311,6 +333,8 @@ export async function updateTenantIntegrationCredentialAction(
   integrationType: IntegrationType,
   formData: FormData
 ) {
+  await requirePartsecAdmin();
+
   const tenant = await prisma.tenant.findUnique({
     where: {
       slug: tenantSlug,
@@ -397,6 +421,8 @@ export async function updateTenantIntegrationCredentialAction(
 }
 
 export async function testZabbixIntegrationAction(tenantSlug: string) {
+  await requirePartsecAdmin();
+
   const { client } = await getZabbixClientForTenant(tenantSlug);
 
   const version = await client.getVersion();
@@ -411,6 +437,8 @@ export async function updateTenantAssetAction(
   assetId: string,
   formData: FormData
 ) {
+  await requirePartsecAdmin();
+
   const name = String(formData.get("name") ?? "").trim();
   const hostname = String(formData.get("hostname") ?? "").trim();
   const ipAddress = String(formData.get("ipAddress") ?? "").trim();
@@ -491,11 +519,7 @@ export async function linkSiemAgentToAssetAction({
   assetId: string;
   wazuhAgentId: string;
 }) {
-  const session = await auth();
-
-  if (!session?.user || session.user.role !== "PARTSEC_ADMIN") {
-    throw new Error("Acesso não autorizado.");
-  }
+  await requirePartsecAdmin();
 
   const tenant = await prisma.tenant.findUnique({
     where: {
