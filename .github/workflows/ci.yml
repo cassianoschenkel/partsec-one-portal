@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Dummy values proven sufficient to run generate/validate/test/lint/build
+  # without any real database or external service connection. DATABASE_URL
+  # deliberately points at an unreachable localhost port so a real
+  # connection attempt would fail fast instead of hanging.
+  DATABASE_URL: "postgresql://ci:ci@127.0.0.1:65535/ci"
+  AUTH_SECRET: "dummydummydummydummydummydummy="
+  AUTH_URL: "http://localhost:3000"
+  APP_URL: "http://localhost:3000"
+  INTEGRATION_CREDENTIALS_SECRET: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  SMTP_HOST: "127.0.0.1"
+  SMTP_PORT: "2525"
+  SMTP_USER: "ci"
+  SMTP_PASS: "ci"
+  SMTP_FROM_EMAIL: "ci@example.invalid"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  build:
+    name: Build & validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history so the whitespace check can diff against the PR base.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Validate Bash safety hook
+        run: node .claude/hooks/validate-block-dangerous-bash.js
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Validate Prisma schema
+        run: npx prisma validate
+
+      - name: Run tests
+        run: npm test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Check for whitespace errors
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ -n "$BASE_REF" ]; then
+            git diff --check "origin/$BASE_REF...HEAD"
+          else
+            git diff --check
+          fi
