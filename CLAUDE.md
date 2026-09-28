@@ -211,9 +211,10 @@ src/generated/prisma/        Generated Prisma client (gitignored, do not edit)
 ## 14. Git workflow
 
 - Feature branches off `main`, e.g. `chore/development-automation-foundation`.
-- Commits and pushes require human approval in this phase (see §16) — an
-  agent session prepares changes but does not commit/push/open PRs itself
-  unless the user explicitly runs those steps.
+- In this phase (see §16) an agent session — including the Claude GitHub
+  Action — may `git add`, `git commit`, and do a normal (non-force)
+  `git push` to its feature/PR working branch. It must never push to or
+  merge into `main`; merge and deploy remain human actions.
 - Never force-push, never rewrite shared/published history.
 - Keep commits scoped and descriptive; prefer several focused commits over
   one large one when a change has distinct logical parts.
@@ -243,11 +244,12 @@ the PreToolUse hook in `.claude/hooks/`):
   (`git status`, `git diff`, `git log`, `git show`, `git branch
   --show-current`, `git rev-parse`); `npm test`; `npm run lint`;
   `npm run build`; `npx prisma generate`; `npx prisma validate`;
-  `npx prisma format`.
-- **Requires approval:** `npm install <pkg>` / `npm uninstall`; `git add`;
-  `git commit`; `git push` (non-force); branch creation/switching when it
-  could discard work; `prisma migrate dev`; any command not explicitly
-  covered by the allow list.
+  `npx prisma format`; `git add`; `git commit`; normal (non-force)
+  `git push`, **only to feature/PR branches** — never to `main`.
+- **Requires approval:** `npm install <pkg>` / `npm uninstall`; branch
+  creation/switching when it could discard work (`git checkout`,
+  `git switch`); `prisma migrate dev`; any command not explicitly covered
+  by the allow list.
 - **Prohibited outright:** see §17/§18.
 - **Blocked scripts are never run by the agent.** In the current phase,
   any command/script denied by `.claude/settings.json` or the PreToolUse
@@ -255,9 +257,11 @@ the PreToolUse hook in `.claude/hooks/`):
   approves it in the prompt. If one of them is needed, the human runs it
   manually, outside the autonomous session.
 
-The agent may prepare code, migration files, and PR content; a human
-performs the actual merge, deploy, and any operation on production or
-real external integrations.
+The agent (including the Claude GitHub Action) may prepare code,
+migration files, and PR content, and may commit and push to its working
+feature/PR branch; it may not merge into `main`. A human performs the
+actual merge, deploy, and any operation on production or real external
+integrations. Force push remains prohibited (§18).
 
 ## 17. Security constraints
 
