@@ -4,7 +4,6 @@ import { auth } from "@/../auth";
 import { getTenantAssetsWithZabbixSnapshots } from "@/lib/queries/assets";
 import {
   AlertTriangle,
-  CheckCircle2,
   Filter,
   LinkIcon,
   MonitorCheck,
