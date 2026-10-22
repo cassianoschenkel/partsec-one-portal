@@ -217,12 +217,15 @@ export type AlertsIndexPatternResult =
   | { ok: false; reason: string };
 
 const MIN_PATTERN_PREFIX_LENGTH = 8;
+const REQUIRED_PATTERN_PREFIX = "wazuh-alerts-";
 const SAFE_PATTERN_RE = /^[a-z0-9][a-z0-9._-]*\*?$/;
 
 /**
  * Validates an alerts index pattern. Accepts only lowercase
  * `[a-z0-9._-]`, at most one `*` and only as the final character, a base
- * of at least 8 characters containing "alerts", and never "archives".
+ * of at least 8 characters starting with the exact prefix "wazuh-alerts-"
+ * (fail-closed; custom prefixes need a separately reviewed change), and
+ * never "archives".
  * Rejects (does not sanitize) anything else, e.g. `*`, paths, URLs,
  * commas, `..`, `?`, `#`, `%`, `:` and whitespace.
  */
@@ -248,8 +251,11 @@ export function validateAlertsIndexPattern(
   if (base.includes("archives")) {
     return { ok: false, reason: "archives indices are out of scope" };
   }
-  if (!base.includes("alerts")) {
-    return { ok: false, reason: "index pattern must target alerts" };
+  if (!base.startsWith(REQUIRED_PATTERN_PREFIX)) {
+    return {
+      ok: false,
+      reason: `index pattern must start with "${REQUIRED_PATTERN_PREFIX}"`,
+    };
   }
   return { ok: true, pattern: value, source: "tenant" };
 }

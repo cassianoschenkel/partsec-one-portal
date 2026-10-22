@@ -70,9 +70,19 @@ The future per-tenant key is `indexer_alerts_index` (like
 `indexer_vulnerabilities_index`). Phase 1 does not read credentials.
 
 Accepted: lowercase `[a-z0-9._-]`, starting alphanumeric, `*` at most once
-and only as the last character, base ≥ 8 chars, containing `alerts`, not
-containing `archives`. Rejected: `*` or broad prefixes, `/`, `\`, `..`,
-`?`, `#`, `%`, `:`, `,`, whitespace, URLs, uppercase, mid-pattern wildcards.
+and only as the last character, base ≥ 8 chars, **starting with the exact
+prefix `wazuh-alerts-`**, not containing `archives`. Rejected: `*` or broad
+prefixes, `/`, `\`, `..`, `?`, `#`, `%`, `:`, `,`, whitespace, URLs,
+uppercase, mid-pattern wildcards, and any pattern outside the
+`wazuh-alerts-` namespace (e.g. `other-alerts-*`, `acme-wazuh-alerts-*`,
+`foo-alerts-bar-*`). Accepted examples: `wazuh-alerts-*`,
+`wazuh-alerts-4.x-*`, `wazuh-alerts-4.x-2023.07.26`.
+
+**Why fail-closed:** merely containing `alerts` would let a tenant
+configuration point the indexer query at generic or foreign indices
+(other products or other customers' prefixes). Requiring the official Wazuh
+namespace keeps the query inside the Wazuh alerts indices. Custom index
+names are only allowed through a future, explicitly reviewed change.
 
 ## Phase 2 proposal (not implemented)
 

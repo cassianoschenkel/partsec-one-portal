@@ -207,7 +207,7 @@ describe("index pattern", () => {
   });
 
   it("accepts safe patterns", () => {
-    for (const v of ["wazuh-alerts-*", "wazuh-alerts-4.x-*", "wazuh-alerts-4.x-2023.07.26", "acme-wazuh-alerts-*"]) {
+    for (const v of ["wazuh-alerts-*", "wazuh-alerts-4.x-*", "wazuh-alerts-4.x-2023.07.26"]) {
       const r = validateAlertsIndexPattern(v);
       assert.equal(r.ok, true, v);
       assert.equal(resolveAlertsIndexPattern(v).ok, true, v);
@@ -222,6 +222,8 @@ describe("index pattern", () => {
       "wazuh-alerts:*", "wazuh-alerts-1,wazuh-archives-*", "wazuh alerts-*",
       " wazuh-alerts-*", "wazuh-archives-*", "wazuh-alerts-archives-*",
       "https://host/wazuh-alerts-*", "Wazuh-Alerts-*", "-wazuh-alerts-*",
+      "other-alerts-*", "acme-wazuh-alerts-*", "foo-alerts-bar-*",
+      "my-wazuh-alerts-4.x-*", "alerts-wazuh-alerts-*", "wazuh-alerts*",
       "", "   ", 5, {},
     ]) {
       assert.equal(validateAlertsIndexPattern(v).ok, false, String(v));
