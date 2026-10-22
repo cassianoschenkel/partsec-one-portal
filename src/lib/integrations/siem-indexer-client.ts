@@ -94,8 +94,6 @@ export class SiemIndexerClient {
     password: string;
     vulnerabilitiesIndex: string;
   }) {
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-
     this.baseUrl = buildApiUrl(baseUrl);
     this.username = username;
     this.password = password;
