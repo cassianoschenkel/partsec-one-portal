@@ -42,6 +42,8 @@ enum IntegrationSyncKind {
   ZABBIX_SNAPSHOT
   SIEM_AGENTS
   SIEM_VULNERABILITIES
+  // Reserved for the Wazuh alerts sync (Phase 2B); not wired to Integration Health yet.
+  SIEM_EVENTS
 }
 
 enum ReportType {
@@ -75,6 +77,7 @@ model Tenant {
   integrationSyncLogs        IntegrationSyncLog[]
   siemAgentSnapshots         SiemAgentSnapshot[]
   siemVulnerabilitySnapshots SiemVulnerabilitySnapshot[]
+  siemEventSnapshots         SiemEventSnapshot[]
   reportRuns                 ReportRun[]
 
   @@map("tenants")
@@ -322,6 +325,38 @@ model SiemVulnerabilitySnapshot {
   @@index([severity])
   @@index([status])
   @@map("siem_vulnerability_snapshots")
+}
+
+// Normalized Wazuh alert events only (Phase 2A). Deliberately no rawData,
+// full_log, data or previous_output: this is not a raw archive.
+// Identity is the Indexer hit (_index + _id) scoped by tenant. Changing the
+// Indexer endpoint/cluster without a plan can cause identity collisions.
+model SiemEventSnapshot {
+  id       String @id @default(cuid())
+  tenantId String
+
+  indexName    String
+  documentId   String
+  occurredAt   DateTime
+  wazuhAgentId String
+  agentName    String?
+
+  ruleId          String
+  ruleLevel       Int
+  ruleDescription String
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  syncedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, indexName, documentId])
+  @@index([tenantId, occurredAt(sort: Desc)])
+  @@index([tenantId, wazuhAgentId, occurredAt(sort: Desc)])
+  @@index([tenantId, ruleLevel, occurredAt(sort: Desc)])
+  @@index([tenantId, ruleId, occurredAt(sort: Desc)])
+  @@map("siem_event_snapshots")
 }
 
 model ReportRun {
