@@ -1,4 +1,3 @@
-import { prisma } from "@/lib/prisma";
 import { IntegrationType } from "@/generated/prisma/client";
 import {
   getIntegrationCredential,
