@@ -26,6 +26,21 @@ jobs:
       )
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # Same dummy values as .github/workflows/ci.yml so Claude can run
+      # generate/validate/test/lint/build without any real database or
+      # external service connection.
+      DATABASE_URL: "postgresql://ci:ci@127.0.0.1:65535/ci"
+      AUTH_SECRET: "dummydummydummydummydummydummy="
+      AUTH_URL: "http://localhost:3000"
+      APP_URL: "http://localhost:3000"
+      INTEGRATION_CREDENTIALS_SECRET: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      SMTP_HOST: "127.0.0.1"
+      SMTP_PORT: "2525"
+      SMTP_USER: "ci"
+      SMTP_PASS: "ci"
+      SMTP_FROM_EMAIL: "ci@example.invalid"
+      NEXT_TELEMETRY_DISABLED: "1"
     permissions:
       contents: read
       pull-requests: read
