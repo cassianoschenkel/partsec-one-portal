@@ -348,3 +348,68 @@ npm run lint
 npm run build
 git diff --check
 ```
+
+## 21. Automatic PR description handoff (Issue workflows)
+
+When finishing work requested from a GitHub Issue in a `claude/issue-N-YYYYMMDD-HHMM`
+feature branch, the **final Issue comment** must contain a complete, accurate
+Pull Request description for the human to review and open. Print the branch
+name in the same comment. Write the description in **raw Markdown**, with the
+following **exact delimiter lines** (not inside code fences):
+
+<!-- PARTSEC_PR_BODY_START -->
+## Summary
+
+[Concrete summary derived from the actual diff]
+
+## Scope
+
+[Files/behaviors that actually changed]
+
+## Database/migration impact
+
+[Explicit changes or say none; never claim that a migration was applied]
+
+## Security/tenant impact
+
+[Tenant isolation, authentication, TLS and secret impact, as applicable]
+
+## Tests
+
+[What was actually tested, plus limitations]
+
+## Validation
+
+- [ ] `npx prisma format`
+- [ ] `npx prisma validate`
+- [ ] `npm test`
+- [ ] `npm run lint`
+- [ ] `npm run build`
+- [ ] `git diff --check`
+
+## Out of scope
+
+[What was deliberately not implemented]
+
+## Deployment notes
+
+[Manual prerequisites and risk; never claim deploy happened]
+
+Closes #N
+<!-- PARTSEC_PR_BODY_END -->
+
+Replace all bracketed guidance with real information. Use the actual Issue
+number instead of N. For the six validation checkboxes, mark `[x]` **only**
+if the corresponding command genuinely succeeded. Add `npm ci` and
+`npx prisma generate` where relevant, and explain warnings/failures clearly.
+Include the complete set of eight headings from
+`.github/pull_request_template.md`; do **not** leave HTML template
+placeholders, speculative claims, secrets or sensitive log output.
+
+The separate default-branch workflow `.github/workflows/pr-description.yml`
+reads these markers from the `claude[bot]` Issue comment when the owner
+manually opens a PR from that exact feature branch. It fills only an empty
+or template-only PR body; it does **not** merge, deploy or run code from the
+PR. If the final comment cannot contain the complete handoff, explain the
+limitation instead of producing incomplete/fabricated content. The human
+remains responsible for CI review, merge and deployment.
