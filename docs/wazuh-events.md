@@ -102,6 +102,91 @@ Wazuh Indexer/OpenSearch version, PIT and `search_after` support, mapping of
 `timestamp` vs `@timestamp` and `agent.id` (keyword), tiebreaker options, and
 index naming/rotation in each environment.
 
+## Phase 2A — persistence schema and reviewed migration (no collector, no UI)
+
+Phase 2A only adds the Prisma model and a versioned SQL file for human
+review. There is **no collector, no Indexer query, no sync job and no UI**
+yet; nothing writes to or reads from the new table. The migration has not
+been applied to any database.
+
+### Table `siem_event_snapshots` (`SiemEventSnapshot`)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `TEXT` PK | `cuid()` |
+| `tenantId` | `TEXT` | FK → `tenants(id)` `ON DELETE CASCADE` |
+| `indexName` | `TEXT` | Indexer `_index` |
+| `documentId` | `TEXT` | Indexer `_id` |
+| `occurredAt` | `TIMESTAMP(3)` | UTC instant validated by the Phase 1 normalizer |
+| `wazuhAgentId` | `TEXT` | keeps leading zeros (e.g. `001`) |
+| `agentName` | `TEXT?` | |
+| `ruleId` | `TEXT` | |
+| `ruleLevel` | `INTEGER` | native Wazuh level, not the Zabbix severity scale |
+| `ruleDescription` | `TEXT` | |
+| `syncedAt` / `createdAt` / `updatedAt` | `TIMESTAMP(3)` | same pattern as other snapshot tables |
+
+Deliberately **not stored**: `rawData`, `full_log`, `data`,
+`previous_output`, the full Indexer payload, secrets or credentials. This is
+a normalized event snapshot, not a raw archive.
+
+### Unique key and indexes
+
+- `UNIQUE (tenantId, indexName, documentId)` — idempotent ingestion
+  (upsert by Indexer hit identity within a tenant).
+- Tenant-first composite indexes, all with `occurredAt DESC`:
+  `(tenantId, occurredAt)`, `(tenantId, wazuhAgentId, occurredAt)`,
+  `(tenantId, ruleLevel, occurredAt)`, `(tenantId, ruleId, occurredAt)`.
+- No standalone `tenantId` index (covered by the leftmost prefix of the
+  above). **Trade-off:** each extra index slows inserts and grows storage on
+  a high-volume table; they were chosen for the expected chronological,
+  per-agent, per-level and per-rule filters. Revisit/drop any that Phase 2B/UI
+  does not actually use.
+
+### Enum
+
+`IntegrationSyncKind` gains `SIEM_EVENTS` (`ALTER TYPE ... ADD VALUE`). It is
+**not** connected to the Integration Health policy; the existing Wazuh health
+(agents + vulnerabilities) is unchanged. Wiring it is pending Phase 2B.
+
+### Migration
+
+`prisma/migrations/20261022140000_add_siem_event_snapshots/migration.sql` —
+additive only (enum value, `CREATE TABLE`, indexes, FK). No `DROP`,
+`DELETE`, `TRUNCATE`, backfill, inserts, or changes to existing tables
+(other than the enum). It was written to match what Prisma generates for the
+schema (63-char identifier truncation considered) but was **not** generated
+or checked against a database.
+
+### Human validation plan (before production)
+
+1. Take a backup of the target database.
+2. In staging (copy of production schema), diff the SQL against
+   `prisma migrate diff` output for the schema and fix any divergence.
+3. Apply in staging (human only), check `\d siem_event_snapshots`, index
+   names, FK and the enum value; confirm the table is empty and existing
+   features (agents, vulnerabilities, Integration Health) still work.
+4. Only after approval, apply in production via the normal deploy process.
+
+### Proposals for Phase 2B (not implemented, pending operational approval)
+
+- Initial retention of **30 days** (no deletion job exists or is added here).
+- Candidate sync frequency: **every 15 minutes**.
+- Hard limits for the collector: time window, page size, max pages and max
+  documents per run per tenant.
+- Tenant authorization: `tenantId` on the table does not authorize
+  ingestion or reading. The collector must confront agent IDs with a
+  trusted link to each tenant's Wazuh group (`externalGroupId`); do not rely
+  on possibly stale snapshots and never fall back to "all agents" when
+  `externalGroupId` is missing.
+
+### Identity collision risk
+
+Identity is `(tenantId, indexName, documentId)`. If the Indexer
+endpoint/cluster is replaced or re-indexed without planning, the same
+`_index`/`_id` may refer to different events (or the same event may appear
+under new names), causing overwritten rows or duplicates. Any endpoint change
+needs a migration plan (e.g. purge/re-sync for the tenant) first.
+
 ## References
 
 - https://documentation.wazuh.com/current/user-manual/wazuh-indexer/wazuh-indexer-indices.html
