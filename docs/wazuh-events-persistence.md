@@ -26,7 +26,11 @@ Input is untrusted; TypeScript types are not evidence. Runtime checks:
 `status === "COMPLETE"`, no `incompleteReason`, `rejected` counters all zero,
 `documentsRead >= events.length`, events and documentsRead below `maxEvents`
 (default 1000, hard cap 10 000; reaching the cap is treated as possibly
-truncated), every event has `tenantId === ctx.tenantId`,
+truncated), `1 <= pages <= ALERT_QUERY_HARD_LIMITS.maxPages` (20) for any
+COMPLETE collection (with or without events), `pages > 1` requires
+`documentsRead > 0`, `ctx.authorizedAgentIds` non-empty with at most
+`MAX_AUTHORIZED_AGENT_IDS` (1000) well-formed string ids (leading zeros kept),
+every event has `tenantId === ctx.tenantId`,
 `displayAuthorization === "AUTHORIZED_BY_AGENT_ALLOWLIST"`, agent in
 `ctx.authorizedAgentIds`, `wazuh-alerts-*` index name (never `archives`),
 bounded non-empty ids/strings, valid `Date`, non-negative integer

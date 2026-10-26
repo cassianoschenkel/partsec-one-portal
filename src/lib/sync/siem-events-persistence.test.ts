@@ -5,6 +5,8 @@ import type {
   AlertCollectionResult,
   AuthorizedSiemAlertEvent,
 } from "../integrations/siem-alerts-query";
+import { MAX_AUTHORIZED_AGENT_IDS } from "../integrations/siem-alerts-authorization";
+import { ALERT_QUERY_HARD_LIMITS } from "../integrations/siem-alerts-query";
 import {
   persistSiemAlertEvents,
   SiemEventsPersistenceError,
@@ -237,6 +239,63 @@ describe("persistSiemAlertEvents - fail closed before any write", () => {
       "INCONSISTENT_COUNTS"
     );
     await expectNoWrites(coll([], { pages: 0 }), "INCONSISTENT_COUNTS");
+  });
+
+  it("rejects zero pages even when events are present", async () => {
+    await expectNoWrites(coll([ev(1)], { pages: 0 }), "INCONSISTENT_COUNTS");
+  });
+
+  it("rejects pages above the 2B-1 hard limit, accepts the limit", async () => {
+    await expectNoWrites(
+      coll([ev(1)], { pages: ALERT_QUERY_HARD_LIMITS.maxPages + 1 }),
+      "INCONSISTENT_COUNTS"
+    );
+    await expectNoWrites(
+      coll([], { pages: ALERT_QUERY_HARD_LIMITS.maxPages + 1 }),
+      "INCONSISTENT_COUNTS"
+    );
+    const { store, calls } = mockStore();
+    await persistSiemAlertEvents({
+      store,
+      collection: coll([ev(1)], { pages: ALERT_QUERY_HARD_LIMITS.maxPages }),
+      ctx: CTX,
+    });
+    assert.equal(calls.finishes[0].status, "SUCCESS");
+  });
+
+  it("rejects several pages with no documents read", async () => {
+    await expectNoWrites(
+      coll([], { pages: 2, documentsRead: 0 }),
+      "INCONSISTENT_COUNTS"
+    );
+  });
+
+  it("rejects non-integer pages and documentsRead", async () => {
+    await expectNoWrites(coll([ev(1)], { pages: 1.5 }), "INVALID_COLLECTION");
+    await expectNoWrites(
+      coll([ev(1)], { pages: Number.NaN }),
+      "INVALID_COLLECTION"
+    );
+    await expectNoWrites(
+      coll([ev(1)], { documentsRead: Infinity }),
+      "INVALID_COLLECTION"
+    );
+  });
+
+  it("rejects too many authorized agent ids, accepts exactly the limit", async () => {
+    const ids = (n: number) =>
+      Array.from({ length: n }, (_, i) => String(i + 1).padStart(6, "0"));
+    await expectNoWrites(coll([ev(1)]), "INVALID_CONTEXT", {
+      ...CTX,
+      authorizedAgentIds: ids(MAX_AUTHORIZED_AGENT_IDS + 1),
+    });
+    const { store, calls } = mockStore();
+    await persistSiemAlertEvents({
+      store,
+      collection: coll([ev(1, { wazuhAgentId: "000001" })]),
+      ctx: { ...CTX, authorizedAgentIds: ids(MAX_AUTHORIZED_AGENT_IDS) },
+    });
+    assert.equal(calls.upserts[0][0].wazuhAgentId, "000001");
   });
 
   it("rejects collections at or over the limit", async () => {

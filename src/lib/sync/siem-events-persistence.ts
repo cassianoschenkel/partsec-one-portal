@@ -20,7 +20,10 @@ import {
   ALERT_QUERY_DEFAULTS,
   ALERT_QUERY_HARD_LIMITS,
 } from "../integrations/siem-alerts-query";
-import { isValidWazuhAgentId } from "../integrations/siem-alerts-authorization";
+import {
+  isValidWazuhAgentId,
+  MAX_AUTHORIZED_AGENT_IDS,
+} from "../integrations/siem-alerts-authorization";
 
 export const SIEM_EVENTS_UPSERT_BATCH_DEFAULT = 100;
 export const SIEM_EVENTS_UPSERT_BATCH_MAX = 500;
@@ -181,6 +184,7 @@ export function validateSiemEventsBatch(
     !boundedString(ctx.tenantId, MAX_ID_LENGTH) ||
     !Array.isArray(ctx.authorizedAgentIds) ||
     ctx.authorizedAgentIds.length === 0 ||
+    ctx.authorizedAgentIds.length > MAX_AUTHORIZED_AGENT_IDS ||
     !ctx.authorizedAgentIds.every(isValidWazuhAgentId)
   ) {
     fail("INVALID_CONTEXT", "tenant context invalid");
@@ -238,8 +242,18 @@ export function validateSiemEventsBatch(
   if (collection.documentsRead >= maxEvents) {
     fail("COLLECTION_AT_LIMIT", "documentsRead reached maxEvents");
   }
-  if (events.length === 0 && collection.pages < 1) {
-    fail("INCONSISTENT_COUNTS", "no pages for an empty COMPLETE collection");
+  // A COMPLETE collection always fetched at least one page, with or without
+  // events, and never more than the 2B-1 hard cap.
+  if (collection.pages < 1) {
+    fail("INCONSISTENT_COUNTS", "COMPLETE collection with zero pages");
+  }
+  if (collection.pages > ALERT_QUERY_HARD_LIMITS.maxPages) {
+    fail("INCONSISTENT_COUNTS", "pages exceed the hard page limit");
+  }
+  // Extra pages cannot have been fetched if nothing was read. No inference is
+  // made about page size.
+  if (collection.pages > 1 && collection.documentsRead === 0) {
+    fail("INCONSISTENT_COUNTS", "multiple pages but no documents read");
   }
 
   if (!(syncedAt instanceof Date) || Number.isNaN(syncedAt.getTime())) {
