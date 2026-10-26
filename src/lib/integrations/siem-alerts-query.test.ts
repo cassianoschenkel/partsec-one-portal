@@ -8,14 +8,19 @@ import {
 import {
   ALERT_SOURCE_FIELDS,
   buildAlertsSearchBody,
+  assertSafeTiebreakerField,
   collectTenantAlerts,
   SiemAlertQueryError,
+  VERIFIED_ALERT_TIEBREAKER_FIELDS,
   type AlertsFetch,
   type CollectTenantAlertsParams,
 } from "./siem-alerts-query";
 
 const FROM = new Date("2026-01-01T00:00:00Z");
 const TO = new Date("2026-01-01T12:00:00Z");
+// SYNTHETIC, test-only field name. Its existence/uniqueness/sortability in a
+// real Wazuh Indexer has NOT been verified; it only exercises the code paths.
+const SYNTHETIC = "synthetic_unique_seq_test_only";
 const range = { from: FROM, to: TO };
 
 const auth = resolveAuthorizedAlertAgents({
@@ -320,7 +325,7 @@ describe("collectTenantAlerts", () => {
           bodies.push(JSON.parse(init.body));
           return reply(pages[i++]);
         },
-        { limits: { pageSize: 2 }, tiebreakerField: "agent.id" }
+        { limits: { pageSize: 2 }, tiebreakerField: SYNTHETIC, verifiedTiebreakerFields: [SYNTHETIC] }
       )
     );
     assert.equal(r.status, "COMPLETE");
@@ -341,7 +346,7 @@ describe("collectTenantAlerts", () => {
   });
 
   it("is INCOMPLETE on missing or duplicated sort values", async () => {
-    const opts = { limits: { pageSize: 2 }, tiebreakerField: "agent.id" };
+    const opts = { limits: { pageSize: 2 }, tiebreakerField: SYNTHETIC, verifiedTiebreakerFields: [SYNTHETIC] };
     const missing = await collectTenantAlerts(
       params(() => reply([hit("a", "001"), hit("b", "001")]), opts)
     );
@@ -364,7 +369,7 @@ describe("collectTenantAlerts", () => {
     const r = await collectTenantAlerts(
       params(
         () => reply([hit("a", "001", undefined, [1, "x"])]),
-        { limits: { pageSize: 1, maxPages: 5 }, tiebreakerField: "agent.id" }
+        { limits: { pageSize: 1, maxPages: 5 }, tiebreakerField: SYNTHETIC, verifiedTiebreakerFields: [SYNTHETIC] }
       )
     );
     assert.equal(r.status, "INCOMPLETE");
@@ -379,7 +384,7 @@ describe("collectTenantAlerts", () => {
     const byPages = await collectTenantAlerts(
       params(next, {
         limits: { pageSize: 1, maxPages: 3, maxDocuments: 100 },
-        tiebreakerField: "agent.id",
+        tiebreakerField: SYNTHETIC, verifiedTiebreakerFields: [SYNTHETIC],
       })
     );
     assert.equal(byPages.status, "INCOMPLETE");
@@ -389,7 +394,7 @@ describe("collectTenantAlerts", () => {
     const byDocs = await collectTenantAlerts(
       params(next, {
         limits: { pageSize: 1, maxPages: 20, maxDocuments: 2 },
-        tiebreakerField: "agent.id",
+        tiebreakerField: SYNTHETIC, verifiedTiebreakerFields: [SYNTHETIC],
       })
     );
     assert.equal(byDocs.incompleteReason, "LIMIT_REACHED");
@@ -407,5 +412,99 @@ describe("collectTenantAlerts", () => {
       ),
       "MALFORMED_RESPONSE"
     );
+  });
+
+  it("ships with no verified tiebreaker field", () => {
+    assert.deepEqual([...VERIFIED_ALERT_TIEBREAKER_FIELDS], []);
+  });
+
+  it("rejects unsafe tiebreaker fields before building or fetching", async () => {
+    const bad: unknown[] = [
+      "agent.id",
+      "AGENT.ID",
+      "_id",
+      "timestamp",
+      "@timestamp",
+      "",
+      " ",
+      "a.b",
+      "a/b",
+      "a*",
+      "*",
+      "a,b",
+      "a b",
+      'a"b',
+      "a}",
+      "a\nb",
+      "_seq",
+      "1seq",
+      "x".repeat(65),
+      42,
+      null,
+      { a: 1 },
+    ];
+    for (const field of bad) {
+      assert.throws(
+        () => assertSafeTiebreakerField(field),
+        (e) => e instanceof SiemAlertQueryError && e.code === "INVALID_TIEBREAKER",
+        String(field)
+      );
+      assert.throws(
+        () =>
+          buildAlertsSearchBody({
+            agentIds: ["001"],
+            range,
+            pageSize: 10,
+            tiebreakerField: field as string,
+          }),
+        (e) => e instanceof SiemAlertQueryError && e.code === "INVALID_TIEBREAKER"
+      );
+      let called = false;
+      const c = await code(
+        collectTenantAlerts(
+          params(
+            () => {
+              called = true;
+              return reply([]);
+            },
+            {
+              tiebreakerField: field as string,
+              verifiedTiebreakerFields: [String(field)],
+            }
+          )
+        )
+      );
+      assert.equal(c, "INVALID_TIEBREAKER");
+      assert.equal(called, false);
+    }
+  });
+
+  it("does not treat a well-formed caller field as verified uniqueness", async () => {
+    const r = await collectTenantAlerts(
+      params(
+        () =>
+          reply([
+            hit("a", "001", undefined, [1, "x1"]),
+            hit("b", "001", undefined, [2, "x2"]),
+          ]),
+        { limits: { pageSize: 2 }, tiebreakerField: SYNTHETIC }
+      )
+    );
+    assert.equal(r.status, "INCOMPLETE");
+    assert.equal(r.incompleteReason, "TIEBREAKER_NOT_VERIFIED");
+    assert.equal(r.pages, 1);
+  });
+
+  it("adds the synthetic field to the sort only after syntax validation", () => {
+    const body = buildAlertsSearchBody({
+      agentIds: ["001"],
+      range,
+      pageSize: 10,
+      tiebreakerField: SYNTHETIC,
+    });
+    assert.deepEqual(body.sort, [
+      { "@timestamp": { order: "asc" } },
+      { [SYNTHETIC]: { order: "asc" } },
+    ]);
   });
 });

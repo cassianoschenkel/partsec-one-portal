@@ -57,10 +57,24 @@ Anything else denies, and the collector throws before any request.
    a `group` array per agent and the group-exists check endpoint to use.
 3. **Mapping** of `agent.id` (keyword?), `timestamp` vs `@timestamp`, and
    whether `@timestamp` is a `date` field.
-4. **Tiebreaker / PIT**: `search_after` is only used with a caller-supplied
-   `tiebreakerField` verified to be sortable and unique; `_id` is never
-   assumed sortable. Without it, multi-page collection returns `INCOMPLETE`.
-   Ties straddling a page boundary cannot be detected client-side; PIT plus a
-   unique tiebreaker must be validated in staging.
+4. **Tiebreaker / PIT**: multi-page collection (`search_after`) is
+   **unavailable** until a human verifies, in a real staging Wazuh Indexer, a
+   field that exists, is sortable and is unique per alert document.
+   - `VERIFIED_ALERT_TIEBREAKER_FIELDS` ships **empty**. A caller-supplied
+     `tiebreakerField` is only honored if it is in that list (or in an
+     explicitly injected `verifiedTiebreakerFields`, intended for tests);
+     otherwise a full page yields `INCOMPLETE` / `TIEBREAKER_NOT_VERIFIED`.
+   - Syntax is validated before any query is built: a single flat identifier
+     (`/^[A-Za-z][A-Za-z0-9_]{0,63}$/`). `agent.id` (shared by many events),
+     `_id`, `timestamp`, `@timestamp`, empty values, dotted paths, wildcards,
+     commas, spaces and other characters are rejected with
+     `INVALID_TIEBREAKER`. Passing syntax validation is NOT proof of uniqueness.
+   - Tests use the **synthetic, hypothetical** name
+     `synthetic_unique_seq_test_only`. It is NOT a real Wazuh field; its
+     existence/compatibility in Wazuh was **not verified** and it must never be
+     used outside tests.
+   - Ties straddling a page boundary cannot be detected client-side. PIT is
+     not implemented and no real pagination capability is claimed; PIT plus a
+     verified unique tiebreaker must be validated in staging.
 5. Per-tenant `indexer_alerts_index` must come from the encrypted
    `IntegrationCredential` in a future tenant-scoped factory (not added here).

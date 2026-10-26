@@ -63,6 +63,7 @@ export type AlertQueryErrorCode =
   | "INVALID_TIME_RANGE"
   | "INVALID_LIMITS"
   | "INVALID_AGENT_IDS"
+  | "INVALID_TIEBREAKER"
   | "UNAUTHORIZED"
   | "FORBIDDEN"
   | "RATE_LIMITED"
@@ -141,6 +142,43 @@ function assertAgentIds(agentIds: readonly string[]): void {
   }
 }
 
+/**
+ * Tiebreaker fields verified in a real Wazuh/Indexer environment to be
+ * sortable AND unique per alert document. Intentionally EMPTY: no such field
+ * has been verified, so multi-page collection stays unavailable (INCOMPLETE)
+ * until a human validates one in staging and adds it here.
+ */
+export const VERIFIED_ALERT_TIEBREAKER_FIELDS: readonly string[] = [];
+
+// Never usable as a uniqueness proof (not unique per alert, or sort-unsafe).
+const FORBIDDEN_TIEBREAKER_FIELDS: ReadonlySet<string> = new Set([
+  "agent.id",
+  "_id",
+  "timestamp",
+  "@timestamp",
+]);
+
+// A single flat identifier: no dots (paths), wildcards, commas, spaces,
+// quotes, brackets or any other character that could alter query structure.
+const TIEBREAKER_FIELD_RE = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
+
+/**
+ * Syntactic validation only. Passing it is NOT proof that the field exists,
+ * is sortable or is unique; that requires membership in
+ * `VERIFIED_ALERT_TIEBREAKER_FIELDS`.
+ */
+export function assertSafeTiebreakerField(
+  field: unknown
+): asserts field is string {
+  if (
+    typeof field !== "string" ||
+    FORBIDDEN_TIEBREAKER_FIELDS.has(field.toLowerCase()) ||
+    !TIEBREAKER_FIELD_RE.test(field)
+  ) {
+    throw new SiemAlertQueryError("INVALID_TIEBREAKER", "invalid tiebreakerField");
+  }
+}
+
 export type AlertSearchBody = {
   size: number;
   _source: readonly string[];
@@ -170,7 +208,8 @@ export function buildAlertsSearchBody(params: {
   }
 
   const sort: AlertSearchBody["sort"] = [{ [ALERT_TIME_FIELD]: { order: "asc" } }];
-  if (params.tiebreakerField) {
+  if (params.tiebreakerField !== undefined) {
+    assertSafeTiebreakerField(params.tiebreakerField);
     sort.push({ [params.tiebreakerField]: { order: "asc" } });
   }
 
@@ -256,8 +295,14 @@ export type CollectTenantAlertsParams = {
   /** Decrypted tenant `indexer_alerts_index`, if configured. Validated here. */
   configuredIndexPattern?: unknown;
   limits?: AlertQueryLimits;
-  /** Human-verified unique + sortable field (staging). Required for >1 page. */
+  /**
+   * Candidate unique + sortable field. Syntax-validated, and only honored when
+   * it is in `verifiedTiebreakerFields`; otherwise multi-page collection is
+   * INCOMPLETE (TIEBREAKER_NOT_VERIFIED).
+   */
   tiebreakerField?: string;
+  /** Defaults to `VERIFIED_ALERT_TIEBREAKER_FIELDS` (empty). Tests may inject. */
+  verifiedTiebreakerFields?: readonly string[];
 };
 
 function indexPatternToRegExp(pattern: string): RegExp {
@@ -362,7 +407,15 @@ export async function collectTenantAlerts(
   const indexRe = indexPatternToRegExp(pattern.pattern);
   const fromMs = p.range.from.getTime();
   const toMs = p.range.to.getTime();
-  const sortLength = p.tiebreakerField ? 2 : 1;
+  if (p.tiebreakerField !== undefined) {
+    assertSafeTiebreakerField(p.tiebreakerField);
+  }
+  const verified = p.verifiedTiebreakerFields ?? VERIFIED_ALERT_TIEBREAKER_FIELDS;
+  const tiebreakerField =
+    p.tiebreakerField !== undefined && verified.includes(p.tiebreakerField)
+      ? p.tiebreakerField
+      : undefined;
+  const sortLength = tiebreakerField ? 2 : 1;
 
   const result: AlertCollectionResult = {
     status: "COMPLETE",
@@ -387,7 +440,7 @@ export async function collectTenantAlerts(
       agentIds,
       range: p.range,
       pageSize: Math.min(limits.pageSize, remaining),
-      tiebreakerField: p.tiebreakerField,
+      tiebreakerField,
       searchAfter,
     });
     const hits = await searchPage(p, pattern.pattern, body, limits.timeoutMs);
@@ -446,7 +499,7 @@ export async function collectTenantAlerts(
     ) {
       return incomplete("LIMIT_REACHED");
     }
-    if (!p.tiebreakerField) {
+    if (!tiebreakerField) {
       // search_after without a verified unique tiebreaker can skip documents
       // sharing the boundary sort value; refuse rather than risk silent loss.
       return incomplete("TIEBREAKER_NOT_VERIFIED");
