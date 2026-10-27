@@ -77,6 +77,31 @@ partial-write behavior) and ideally the final log update with it. Until then,
 a partial write is reported as `ERROR` with the persisted count, never as
 success.
 
+### Transactional path (Phase 2B-2B1, offline)
+
+`persistSiemAlertEventsTransactional` (`siem-events-transactional.ts`) with
+`createPrismaSiemEventsStore` (`siem-events-prisma-store.ts`) is the
+transactional alternative; `persistSiemAlertEvents` is unchanged.
+
+- Validation first (same fail-closed rules); invalid input makes no store call.
+- `RUNNING` log is created **outside** the transaction, after validation.
+- **One** `$transaction` wraps ALL chunk upserts AND the `SUCCESS` update. If a
+  chunk or the `SUCCESS` update fails, everything rolls back and success is
+  never reported.
+- After rollback, a **separate** operation sets the log to `ERROR`. If it
+  fails, `SYNC_LOG_FINISH_FAILED` is thrown and the log stays `RUNNING`.
+- Log updates use `updateMany({ where: { id, tenantId } })` and require
+  `count === 1`.
+- Prisma client is injected; no singleton, env, connection or raw SQL; only
+  `upsert` by `tenantId_indexName_documentId`, `create`, `updateMany`.
+
+Limits: a single large transaction (up to the document cap) holds locks until
+commit; a crash between `RUNNING` creation and the transaction, or while
+writing `ERROR`, leaves an orphan `RUNNING` log (no reaper exists); a retry
+creates a new log and is safe because upserts are idempotent; no checkpoint is
+read or advanced. Rollback is proven only against a fake that simulates
+commit/rollback; real PostgreSQL behavior is not tested here.
+
 ## Checkpoint (contract only)
 
 `SiemEventsCheckpointPort` is an unimplemented interface. A checkpoint/window
