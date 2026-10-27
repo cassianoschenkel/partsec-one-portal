@@ -252,6 +252,77 @@ describe("persistSiemAlertEventsTransactional", () => {
     assert.equal(f.logs().get("log-1")?.status, "RUNNING");
   });
 
+  it("SUCCESS on another tenant's log rolls back every upsert (runInTransaction port)", async () => {
+    const f = fakeClient({
+      seedLogs: [{ id: "log-b", tenantId: "tenant-b", status: "RUNNING" }],
+    });
+    const store = createPrismaSiemEventsStore(f.client);
+    const rows = [1, 2, 3].map((n) => ({
+      tenantId: TENANT,
+      indexName: "wazuh-alerts-x",
+      documentId: `d-${n}`,
+      occurredAt: new Date(),
+      wazuhAgentId: "001",
+      agentName: null,
+      ruleId: "1",
+      ruleLevel: 1,
+      ruleDescription: "d",
+      syncedAt: new Date(),
+    }));
+    await assert.rejects(
+      store.runInTransaction(async (tx) => {
+        await tx.upsertEvents(rows.slice(0, 2));
+        await tx.upsertEvents(rows.slice(2));
+        assert.equal(f.stats.upsertCalls, 3); // upserts were attempted
+        await tx.finishSyncLogSuccess(TENANT, "log-b", {
+          status: "SUCCESS",
+          finishedAt: new Date(),
+          durationMs: 1,
+          message: "x",
+        });
+      }),
+      (e: unknown) => {
+        assert.ok(e instanceof Error);
+        assert.ok(!/log-b|tenant-b|tenant-a|d-\d|wazuh-alerts/.test(e.message));
+        return true;
+      }
+    );
+    assert.deepEqual(f.updateWheres, [{ id: "log-b", tenantId: TENANT }]);
+    assert.equal(f.events().size, 0);
+    assert.equal(f.stats.commits, 0);
+    assert.equal(f.stats.rollbacks, 1);
+    assert.equal(f.logs().get("log-b")?.status, "RUNNING");
+    assert.equal(f.logs().get("log-b")?.message, undefined);
+  });
+
+  it("full cycle with a foreign log id: never SUCCESS, rollback, tenant B log untouched", async () => {
+    const f = fakeClient({
+      seedLogs: [{ id: "log-b", tenantId: "tenant-b", status: "RUNNING" }],
+    });
+    const real = createPrismaSiemEventsStore(f.client);
+    // Inject the foreign log id through the port only (test-local wrapper).
+    const store = { ...real, createSyncLog: async () => ({ id: "log-b" }) };
+    await assert.rejects(
+      persistSiemAlertEventsTransactional({
+        store,
+        collection: coll([ev(1), ev(2), ev(3)]),
+        ctx: CTX,
+      }),
+      (e: unknown) => {
+        assert.ok(e instanceof SiemEventsPersistenceError);
+        // ERROR marking is also tenant-scoped, so it cannot save either.
+        assert.equal(e.code, "SYNC_LOG_FINISH_FAILED");
+        assert.ok(!/log-b|tenant-|secret|password|token|doc-|wazuh-alerts/.test(e.message));
+        return true;
+      }
+    );
+    assert.equal(f.events().size, 0);
+    assert.equal(f.stats.commits, 0);
+    assert.equal(f.stats.rollbacks, 1);
+    assert.ok(f.updateWheres.every((w) => w.id === "log-b" && w.tenantId === TENANT));
+    assert.equal(f.logs().get("log-b")?.status, "RUNNING");
+  });
+
   it("makes zero store calls on invalid input", async () => {
     const f = fakeClient();
     const store = createPrismaSiemEventsStore(f.client);

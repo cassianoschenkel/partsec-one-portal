@@ -108,9 +108,26 @@ commit/rollback; real PostgreSQL behavior is not tested here.
 may advance only after `persistSiemAlertEvents` resolved for a COMPLETE batch;
 never on INCOMPLETE, discards, write or log failures.
 
+## Which path is which
+
+- `persistSiemAlertEvents` — legacy, offline, **non-transactional** (partial
+  writes possible). Must **not** be used for real ingestion.
+- `persistSiemAlertEventsTransactional` + `createPrismaSiemEventsStore` — the
+  **intended** transactional path for future integration, subject to staging
+  validation. Implemented in code and tested **exclusively against a fake**;
+  it is **not connected to a real PostgreSQL**, and no route, action, CLI, job
+  or scheduler uses it.
+
 ## Pending for 2B-2B / operations
 
-- Trusted tenant-scoped factory and Manager/Indexer origin evidence.
-- Prisma adapter with a transaction; applying the Phase 2A migration (human).
-- Persistent checkpoint; verified multi-page tiebreaker field.
+- Trusted tenant-scoped factory and proof of Manager/Indexer origin of events.
+- Real-database validation of the transactional adapter (real transactions,
+  rollback and lock behavior are untested); staging validation first.
+- Applying the Phase 2A migration (human action).
+- Persistent checkpoint (contract only; not read or advanced).
+- Verified PIT pagination / multi-page tiebreaker field.
 - Scheduling (15 min proposal) and retention (30 days proposal): not configured.
+
+Test coverage includes: SUCCESS finalization against another tenant's log
+(`updateMany` with `count === 0`) rolls back all upserts of the cycle, with no
+commit and no SUCCESS, leaving the other tenant's log unchanged.
