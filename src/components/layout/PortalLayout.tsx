@@ -1,6 +1,7 @@
 import type { UserRole } from "@/generated/prisma/client";
 import { logoutAction } from "@/app/actions/auth-actions";
 import { ShieldCheck } from "lucide-react";
+import { canViewSessionMetadata } from "@/lib/authz/rules";
 import { PortalSidebarNav } from "@/components/layout/PortalSidebarNav";
 
 //export function PortalLayout({ children }: { children: React.ReactNode }) {
@@ -72,13 +73,15 @@ import { PortalSidebarNav } from "@/components/layout/PortalSidebarNav";
 			Operação normal
 		  </div>
 
-		  <div className="hidden text-right md:block">
-			<div className="text-sm font-bold text-slate-900">{userName}</div>
-			<div className="text-xs text-slate-500">
-			  {userRole ?? "Perfil não definido"}
-			  {userEmail ? ` · ${userEmail}` : ""}
+		  {canViewSessionMetadata(userRole) && (
+			<div className="hidden text-right md:block">
+			  <div className="text-sm font-bold text-slate-900">{userName}</div>
+			  <div className="text-xs text-slate-500">
+				{userRole}
+				{userEmail ? ` · ${userEmail}` : ""}
+			  </div>
 			</div>
-		  </div>
+		  )}
 
 		  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
 			{tenantInitials}

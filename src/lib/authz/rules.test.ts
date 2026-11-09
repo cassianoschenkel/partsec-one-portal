@@ -77,3 +77,14 @@ test("assertTenantMutationRole fails closed for an unrecognized future role", ()
   });
   assert.throws(() => assertTenantMutationRole(user), AuthorizationError);
 });
+
+import { canViewSessionMetadata } from "./rules";
+
+test("canViewSessionMetadata allows only PARTSEC_ADMIN (fail-closed)", () => {
+  assert.equal(canViewSessionMetadata(UserRole.PARTSEC_ADMIN), true);
+  assert.equal(canViewSessionMetadata(UserRole.TENANT_ADMIN), false);
+  assert.equal(canViewSessionMetadata(UserRole.TENANT_USER), false);
+  assert.equal(canViewSessionMetadata(UserRole.READ_ONLY), false);
+  assert.equal(canViewSessionMetadata(undefined), false);
+  assert.equal(canViewSessionMetadata(null), false);
+});

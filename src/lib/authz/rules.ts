@@ -56,3 +56,12 @@ export function assertTenantMutationRole(
     );
   }
 }
+
+/**
+ * Fail-closed: only an explicit PARTSEC_ADMIN role may see session metadata
+ * (name / e-mail / technical role code) in the portal header. Any other value,
+ * including undefined, hides it.
+ */
+export function canViewSessionMetadata(role: UserRole | null | undefined) {
+  return role === UserRole.PARTSEC_ADMIN;
+}

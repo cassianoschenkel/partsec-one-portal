@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/../auth";
 import { PortalLayout } from "@/components/layout/PortalLayout";
-import { getTenantWithRelationsById } from "@/lib/queries/tenant";
+import { getTenantNameById } from "@/lib/queries/customer-settings";
 import { getInitials } from "@/lib/format";
 
 export default async function InternalPortalLayout({
@@ -33,7 +33,7 @@ export default async function InternalPortalLayout({
     redirect("/login");
   }
 
-  const tenant = await getTenantWithRelationsById(session.user.tenantId);
+  const tenant = await getTenantNameById(session.user.tenantId);
 
   if (!tenant) {
     redirect("/login");
@@ -43,8 +43,6 @@ export default async function InternalPortalLayout({
     <PortalLayout
       tenantName={tenant.name}
       tenantInitials={getInitials(tenant.name)}
-      userName={session.user.name}
-      userEmail={session.user.email}
       userRole={session.user.role}
     >
       {children}
