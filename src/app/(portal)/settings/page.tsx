@@ -145,7 +145,7 @@ export default async function SettingsPage() {
         <div className="grid gap-4 md:grid-cols-3">
           {integrations.map((integration) => (
             <div
-              key={integration.id}
+              key={integration.key}
               className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
             >
               <div className="font-semibold text-slate-900">

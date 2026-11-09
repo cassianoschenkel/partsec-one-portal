@@ -4,13 +4,13 @@ import type {
 } from "@/generated/prisma/enums";
 
 export type CustomerIntegrationInput = {
-  id: string;
   type: IntegrationType;
   status: IntegrationStatus;
 };
 
 export type CustomerIntegrationView = {
-  id: string;
+  /** Stable card key: IntegrationType is unique per tenant. */
+  key: IntegrationType;
   label: string;
   description: string;
   statusLabel: string;
@@ -44,7 +44,7 @@ export function toCustomerIntegrationView(
   };
 
   return {
-    id: integration.id,
+    key: integration.type,
     label: service.label,
     description: service.description,
     statusLabel:

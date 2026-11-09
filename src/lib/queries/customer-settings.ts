@@ -21,7 +21,6 @@ export const customerSettingsSelect = {
   integrations: {
     orderBy: { type: "asc" },
     select: {
-      id: true,
       type: true,
       status: true,
     },

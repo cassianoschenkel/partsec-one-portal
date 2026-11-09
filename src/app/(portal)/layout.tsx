@@ -43,8 +43,6 @@ export default async function InternalPortalLayout({
     <PortalLayout
       tenantName={tenant.name}
       tenantInitials={getInitials(tenant.name)}
-      userName={session.user.name}
-      userEmail={session.user.email}
       userRole={session.user.role}
     >
       {children}
