@@ -77,15 +77,57 @@ partial-write behavior) and ideally the final log update with it. Until then,
 a partial write is reported as `ERROR` with the persisted count, never as
 success.
 
+### Transactional path (Phase 2B-2B1, offline)
+
+`persistSiemAlertEventsTransactional` (`siem-events-transactional.ts`) with
+`createPrismaSiemEventsStore` (`siem-events-prisma-store.ts`) is the
+transactional alternative; `persistSiemAlertEvents` is unchanged.
+
+- Validation first (same fail-closed rules); invalid input makes no store call.
+- `RUNNING` log is created **outside** the transaction, after validation.
+- **One** `$transaction` wraps ALL chunk upserts AND the `SUCCESS` update. If a
+  chunk or the `SUCCESS` update fails, everything rolls back and success is
+  never reported.
+- After rollback, a **separate** operation sets the log to `ERROR`. If it
+  fails, `SYNC_LOG_FINISH_FAILED` is thrown and the log stays `RUNNING`.
+- Log updates use `updateMany({ where: { id, tenantId } })` and require
+  `count === 1`.
+- Prisma client is injected; no singleton, env, connection or raw SQL; only
+  `upsert` by `tenantId_indexName_documentId`, `create`, `updateMany`.
+
+Limits: a single large transaction (up to the document cap) holds locks until
+commit; a crash between `RUNNING` creation and the transaction, or while
+writing `ERROR`, leaves an orphan `RUNNING` log (no reaper exists); a retry
+creates a new log and is safe because upserts are idempotent; no checkpoint is
+read or advanced. Rollback is proven only against a fake that simulates
+commit/rollback; real PostgreSQL behavior is not tested here.
+
 ## Checkpoint (contract only)
 
 `SiemEventsCheckpointPort` is an unimplemented interface. A checkpoint/window
 may advance only after `persistSiemAlertEvents` resolved for a COMPLETE batch;
 never on INCOMPLETE, discards, write or log failures.
 
+## Which path is which
+
+- `persistSiemAlertEvents` — legacy, offline, **non-transactional** (partial
+  writes possible). Must **not** be used for real ingestion.
+- `persistSiemAlertEventsTransactional` + `createPrismaSiemEventsStore` — the
+  **intended** transactional path for future integration, subject to staging
+  validation. Implemented in code and tested **exclusively against a fake**;
+  it is **not connected to a real PostgreSQL**, and no route, action, CLI, job
+  or scheduler uses it.
+
 ## Pending for 2B-2B / operations
 
-- Trusted tenant-scoped factory and Manager/Indexer origin evidence.
-- Prisma adapter with a transaction; applying the Phase 2A migration (human).
-- Persistent checkpoint; verified multi-page tiebreaker field.
+- Trusted tenant-scoped factory and proof of Manager/Indexer origin of events.
+- Real-database validation of the transactional adapter (real transactions,
+  rollback and lock behavior are untested); staging validation first.
+- Applying the Phase 2A migration (human action).
+- Persistent checkpoint (contract only; not read or advanced).
+- Verified PIT pagination / multi-page tiebreaker field.
 - Scheduling (15 min proposal) and retention (30 days proposal): not configured.
+
+Test coverage includes: SUCCESS finalization against another tenant's log
+(`updateMany` with `count === 0`) rolls back all upserts of the cycle, with no
+commit and no SUCCESS, leaving the other tenant's log unchanged.
