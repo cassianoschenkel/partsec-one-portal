@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/../auth";
-import { getTenantWithRelationsById } from "@/lib/queries/tenant";
+import { getCustomerSettingsByTenantId } from "@/lib/queries/customer-settings";
+import { toCustomerIntegrationView } from "@/lib/customer-settings-view";
 import { Building2, Plug, Users } from "lucide-react";
 
 export default async function SettingsPage() {
@@ -22,7 +23,7 @@ export default async function SettingsPage() {
     );
   }
 
-  const tenant = await getTenantWithRelationsById(session.user.tenantId);
+  const tenant = await getCustomerSettingsByTenantId(session.user.tenantId);
 
   if (!tenant) {
     return (
@@ -32,6 +33,8 @@ export default async function SettingsPage() {
     );
   }
 
+  const integrations = tenant.integrations.map(toCustomerIntegrationView);
+
   return (
     <div className="space-y-8">
       <section>
@@ -39,7 +42,7 @@ export default async function SettingsPage() {
           Configurações
         </h2>
         <p className="mt-2 text-slate-600">
-          Dados do cliente, usuários autorizados e integrações técnicas do
+          Dados do cliente, usuários autorizados e serviços disponíveis no
           Partsec One.
         </p>
       </section>
@@ -60,11 +63,6 @@ export default async function SettingsPage() {
             <div>
               <div className="font-semibold text-slate-700">Nome</div>
               <div className="text-slate-600">{tenant.name}</div>
-            </div>
-
-            <div>
-              <div className="font-semibold text-slate-700">Slug</div>
-              <div className="font-mono text-slate-600">{tenant.slug}</div>
             </div>
 
             <div>
@@ -139,34 +137,25 @@ export default async function SettingsPage() {
           <div>
             <h3 className="font-bold text-slate-900">Integrações</h3>
             <p className="text-sm text-slate-500">
-              Configurações de vínculo com SIEM, monitoramento e Central de Suporte.
+              Serviços de monitoramento, segurança e suporte do cliente.
             </p>
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
-          {tenant.integrations.map((integration) => (
+          {integrations.map((integration) => (
             <div
               key={integration.id}
               className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
             >
-              <div className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                {integration.type}
+              <div className="font-semibold text-slate-900">
+                {integration.label}
               </div>
-
-              <div className="mt-2 font-semibold text-slate-900">
-                {integration.displayName}
+              <div className="mt-1 text-xs text-slate-500">
+                {integration.description}
               </div>
-
-              <div className="mt-3 space-y-1 text-xs text-slate-500">
-                <div>Status: {integration.status}</div>
-                <div>Base URL: {integration.baseUrl ?? "Não configurada"}</div>
-                <div>
-                  Grupo externo:{" "}
-                  {integration.externalGroupId ??
-                    integration.externalOrgId ??
-                    "Não configurado"}
-                </div>
+              <div className="mt-3 text-xs font-semibold text-slate-600">
+                {integration.statusLabel}
               </div>
             </div>
           ))}
